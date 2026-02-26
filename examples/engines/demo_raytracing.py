@@ -58,8 +58,8 @@ def main(mic_type='mono', output_dir='outputs',
         exit(1)
 
     renderer.set_source_audio(src1, os.path.join(base_path, "speaker_1.wav"), gain=1.0)
-    renderer.set_source_audio(src2, os.path.join(base_path, "speaker_2.wav"), gain=1.0)
-    renderer.set_source_audio(src_bg, os.path.join(base_path, "foreground.wav"), gain=0.1)
+    #renderer.set_source_audio(src2, os.path.join(base_path, "speaker_2.wav"), gain=0.0)
+    #renderer.set_source_audio(src_bg, os.path.join(base_path, "foreground.wav"), gain=0.0)
 
     # 8. Render
     print("Starting Ray-tracing Rendering pipeline...")
@@ -74,7 +74,7 @@ def main(mic_type='mono', output_dir='outputs',
     # 9. Save Result
     mixed_audio = outputs[mic.name]
     rir = rirs[mic.name]
-
+    print(rir)
     if mixed_audio is None:
         print("Error: No audio output generated.")
         return

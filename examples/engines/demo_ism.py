@@ -63,7 +63,7 @@ def main(mic_type='mono', output_dir='outputs',
     # Note: High ISM orders are computationally expensive (exponential growth).
     # Order 5 or 6 is usually a practical limit for full RIRs in complex rooms,
     # but for simple rooms it can go higher.
-    ism_order = 5
+    ism_order = 10
     print(f"  - ISM Order: {ism_order}")
 
     with PerformanceMonitor() as monitor:
@@ -73,7 +73,7 @@ def main(mic_type='mono', output_dir='outputs',
             interference=False  # Set to True for phase interference effects if desired
         )
     save_performance_metrics(monitor, output_dir, "ism")
-
+    print(outputs, rirs)
     # 8. Save Result
     mixed_audio = outputs[mic.name]
     rir = rirs[mic.name]

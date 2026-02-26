@@ -118,6 +118,7 @@ class ImageSourceEngine:
 
             # 1. Generate Image Sources
         images = self._generate_image_sources(source, max_order)
+        self.last_image_sources = images 
 
         if verbose:
             print(
@@ -424,3 +425,12 @@ class ImageSourceEngine:
             receiver.record(time, energy, arrival_dir)
         elif isinstance(receiver, Receiver):
             receiver.record(time, energy)
+
+        if not hasattr(receiver, 'ism_paths'):
+            receiver.ism_paths = []
+        receiver.ism_paths.append({'points': [p.copy() for p in path_points], 
+                                   'walls': walls_hit, 
+                                   'order': image.order,
+                                   'energy': energy, 
+                                   'time': time
+                                   })

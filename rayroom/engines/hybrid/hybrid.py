@@ -175,6 +175,7 @@ class HybridRenderer:
             print(f"Warning: Sample rate mismatch {fs} vs {self.fs}. Playback speed will change.")
         return data
 
+
     def render(self, n_rays=10000, max_hops=50, rir_duration=2.0,
                verbose=True, record_paths=False, interference=False,
                ism_order=3, show_path_plot=False, parallel=True):

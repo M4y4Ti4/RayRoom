@@ -27,8 +27,8 @@ def main(mic_type='mono', output_dir='outputs',
     # 1. Define Small Room (Same as small room example)
     room, sources, mic = DemoRoom(mic_type=mic_type, ambisonic_order=ambisonic_order).create_room()
     src1 = sources["src1"]
-    src2 = sources["src2"]
-    src_bg = sources["src_bg"]
+    #src2 = sources["src2"]
+    #src_bg = sources["src_bg"]
 
     # 3. Create output directory if it doesn't exist
     if output_dir:
@@ -54,8 +54,8 @@ def main(mic_type='mono', output_dir='outputs',
         exit(1)
 
     renderer.set_source_audio(src1, os.path.join(base_path, "speaker_1.wav"), gain=1.0)
-    renderer.set_source_audio(src2, os.path.join(base_path, "speaker_2.wav"), gain=1.0)
-    renderer.set_source_audio(src_bg, os.path.join(base_path, "foreground.wav"), gain=0.1)
+    #renderer.set_source_audio(src2, os.path.join(base_path, "speaker_2.wav"), gain=1.0)
+    #renderer.set_source_audio(src_bg, os.path.join(base_path, "foreground.wav"), gain=0.1)
 
     # 7. Render using Hybrid Method
     # ism_order=2 means reflections of order 0, 1, 2 are handled by ISM.
@@ -64,15 +64,19 @@ def main(mic_type='mono', output_dir='outputs',
 
     with PerformanceMonitor() as monitor:
         outputs, _, rirs = renderer.render(
-            n_rays=20000,
+            n_rays=10000,
             max_hops=50,
-            rir_duration=1.5,
+            rir_duration=0.2,
             record_paths=True,
             interference=False,
             ism_order=2,         # Enable Hybrid Mode
-            show_path_plot=False
+            show_path_plot=True
         )
     save_performance_metrics(monitor, output_dir, "hybrid")
+
+    rir = rirs[mic.name]
+    print("RIR shape:", rir.shape)
+    print("RIR max:", np.max(np.abs(rir)))
 
     # 8. Save Result
     mixed_audio = outputs[mic.name]
