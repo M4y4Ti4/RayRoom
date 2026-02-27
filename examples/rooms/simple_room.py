@@ -45,7 +45,7 @@ def main():
 
     print("Starting simulation...")
     #tracer.generate_rir_only(source, n_rays=20000, max_hops=30)
-    outputs, all_paths, last_rirs = tracer.render(n_rays=1000,
+    orirs, all_paths = tracer.render(n_rays=1000,
             max_hops=30,
             rir_duration=1.0,
             record_paths=True,
@@ -53,6 +53,21 @@ def main():
             ism_order=2,         # Enable Hybrid Mode
             show_path_plot=True)
     
+    times, energies = zip(*receiver1.amplitude_histogram)
+    times = np.array(times)
+    energies = np.array(energies)
+
+    plt.figure()
+
+    N_BANDS = energies.shape[1]
+    colors = plt.cm.viridis(np.linspace(0,1,N_BANDS))
+
+    for b in range(N_BANDS):
+        plt.hist(times, bins = 50, weights=energies[:,b], alpha=0.2, color=colors[b], label=f'Band{b+1}')
+    
+    plt.show()
+
+"""
     #access image sources
     image_sources = tracer.ism_engine.last_image_sources
     print(len(image_sources))
@@ -63,7 +78,7 @@ def main():
     print(f"Recorded {len(ray_paths)} ray paths")
     
     for path in receiver1.ism_paths:
-        print(f"Order {path['order']}, time={path['time']:.4f}s, energy={path['energy']:.4e}")
+        print(f"Order {path['order']}, time={path['time']:.4f}s, energy={path['energy']}")
         for p in path['points']:
             print(f"  {np.round(p, 3)}")
     
@@ -91,7 +106,6 @@ def main():
         print("No energy received at microphone.")
     
     np.savez('IR_data', times=times1, energies=energies1)
-
-
+"""
 if __name__ == "__main__":
     main()
