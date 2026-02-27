@@ -83,7 +83,7 @@ class Receiver(Object3D):
         :type energy: float or np.ndarray
         """
         # Convert energy to amplitude
-        if energy >= 0:
+        if np.all(energy) >= 0:
             self.amplitude_histogram.append((time, np.sqrt(energy)))
 
 

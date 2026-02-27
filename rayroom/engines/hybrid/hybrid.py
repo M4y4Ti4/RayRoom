@@ -266,19 +266,19 @@ class HybridRenderer:
                 results_to_process.append((source, res_histograms, res_paths))
 
         # 2. Process Results (Generate RIRs & Convolve)
+        rir_outputs = {}
+
         for source, histograms, paths in results_to_process:
             if record_paths and paths:
+                if all_paths is None:
+                    all_paths = {}
                 all_paths.update(paths)
-
-            source_audio = self.source_audios[source]
-            gain = self.source_gains[source]
 
             for rx in self.room.receivers:
                 rx_hist_data = histograms.get(rx.name)
                 
                 if isinstance(rx, AmbisonicReceiver):
                     channel_rirs = []
-                    processed_channels = []
 
                     # Generate RIRs for all configured channels
                     for ch_name in rx.channel_names:
@@ -287,62 +287,19 @@ class HybridRenderer:
                             hist, self.fs, rir_duration, not interference
                         )
                         channel_rirs.append(rir_ch)
-                        processed_ch = fftconvolve(
-                            source_audio * gain, rir_ch, mode='full'
-                        )
-                        processed_channels.append(processed_ch)
 
                     # Store multi-channel RIR
                     rir = np.stack(channel_rirs, axis=1)
 
-                    # Stack processed audio
-                    max_len = max(len(p) for p in processed_channels)
-                    padded_channels = [np.pad(p, (0, max_len - len(p))) for p in processed_channels]
-                    processed = np.stack(padded_channels, axis=1)
-
                 else:
                     hist = rx_hist_data if rx_hist_data is not None else []
                     rir = generate_rir(hist, self.fs, rir_duration, not interference)
-                    processed = fftconvolve(source_audio * gain, rir, mode='full')
-                    # Store as list for consistency if needed, but last_rirs expects array
-                    # Processed is 1D array here
 
                 # Store the RIR, last source overwrites.
                 self.last_rirs[rx.name] = rir
-
-                if receiver_outputs[rx.name] is None:
-                    receiver_outputs[rx.name] = processed
-                else:
-                    # Pad and add
-                    current = receiver_outputs[rx.name]
-                    is_multichannel = processed.ndim > 1
-                    num_channels = processed.shape[1] if is_multichannel else 1
-
-                    if len(processed) > len(current):
-                        if is_multichannel:
-                            padding = np.zeros(
-                                (len(processed) - len(current), num_channels)
-                            )
-                        else:
-                            padding = np.zeros(len(processed) - len(current))
-                        current = np.concatenate((current, padding))
-                        receiver_outputs[rx.name] = current
-                    elif len(current) > len(processed):
-                        if is_multichannel:
-                            padding = np.zeros(
-                                (len(current) - len(processed), num_channels)
-                            )
-                        else:
-                            padding = np.zeros(len(current) - len(processed))
-                        processed = np.concatenate((processed, padding))
-
-                    receiver_outputs[rx.name] += processed
-
-        # Normalize final output
-        for name, audio in receiver_outputs.items():
-            if audio is not None and np.max(np.abs(audio)) > 0:
-                receiver_outputs[name] /= np.max(np.abs(audio))
+                rir_outputs[rx.name] = rir
+               
 
         if record_paths:
-            return receiver_outputs, all_paths, self.last_rirs
-        return receiver_outputs, self.last_rirs
+            return rir_outputs, all_paths
+        return rir_outputs

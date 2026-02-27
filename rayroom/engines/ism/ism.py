@@ -16,7 +16,7 @@ path validity and occlusion.
 """
 import numpy as np
 
-from ...core.constants import C_SOUND
+from ...core.constants import C_SOUND, FREQ_BANDS, N_BANDS
 from ...core.physics import air_absorption_coefficient
 from ...room.objects import AmbisonicReceiver, Receiver
 from ...core.geometry import ray_plane_intersection, is_point_in_polygon, normalize
@@ -95,9 +95,9 @@ class ImageSourceEngine:
         self.temperature = temperature
         self.humidity = humidity
         # Match RayTracer's reference frequency
-        self.air_absorption_db_m = air_absorption_coefficient(
-            1000.0, temperature, humidity
-        )
+        self.air_absorption_db_m = np.array([air_absorption_coefficient(
+            f, temperature, humidity
+        ) for f in FREQ_BANDS])
 
     def run(self, source, max_order=2, verbose=True):
         """Computes early reflections for a given source.
@@ -413,7 +413,7 @@ class ImageSourceEngine:
 
         # Wall Absorption (Reflection coefficients)
         for wall in walls_hit:
-            mat = wall.material
+            mat = wall.material #array, 7
             abs_coeff = np.mean(mat.absorption) \
                 if np.ndim(mat.absorption) > 0 else mat.absorption
             energy *= (1.0 - abs_coeff)

@@ -2,7 +2,7 @@ import numpy as np
 from tqdm import tqdm
 
 from ...core.physics import air_absorption_coefficient
-from ...core.constants import C_SOUND
+from ...core.constants import C_SOUND, N_BANDS
 from ...core.geometry import (
     ray_plane_intersection,
     ray_box_intersection,
@@ -178,6 +178,7 @@ class RayTracer:
         """
         Trace a single ray.
         """
+
         ray_path = []
         current_time = 0.0
         total_dist = 0.0
@@ -279,18 +280,19 @@ class RayTracer:
                             # For the parallel refactor, we will make this function return hits.
                             
                             # Storing hit info: (receiver_name, time, energy, direction)
+                            energy_array = np.full(N_BANDS, current_energy)
                             hit_info = {
                                 'receiver_name': receiver.name,
                                 'time': time,
-                                'energy': current_energy,
+                                'energy': energy_array.copy(),
                                 'direction': ray_dir
                             }
                             hit_results.append(hit_info)
                             
                             if isinstance(receiver, AmbisonicReceiver):
-                                receiver.record(time, current_energy, ray_dir)
+                                receiver.record(time, energy_array, ray_dir)
                             else:
-                                receiver.record(time, current_energy)
+                                receiver.record(time, energy_array)
 
 
             # 3. Handle Wall Hit
@@ -325,13 +327,12 @@ class RayTracer:
             mat = hit_obj.material
 
             # Material properties (handle scalar or array)
-            abs_coeff = np.mean(mat.absorption) if np.ndim(mat.absorption) > 0 else mat.absorption
-            trans_coeff = np.mean(mat.transmission) if np.ndim(mat.transmission) > 0 else mat.transmission
-            scat_coeff = np.mean(mat.scattering) if np.ndim(mat.scattering) > 0 else mat.scattering
+            abs_coeff = np.mean(mat.absorption) 
+            trans_coeff = np.mean(mat.transmission) if hasattr(mat.transmission, "__len__") else mat.transmission
+            scat_coeff = np.mean(mat.scattering) if hasattr(mat.scattering, "__len__") else mat.scattering
 
             # Energy loss due to absorption
             current_energy *= (1.0 - abs_coeff)
-
             # Determine fate: Transmit or Reflect?
             # Probability of transmission given we didn't absorb: T / (1 - A)
 
