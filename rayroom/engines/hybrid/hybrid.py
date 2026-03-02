@@ -11,62 +11,40 @@ from ...room.objects import AmbisonicReceiver
 
 
 def _run_hybrid_task(ism_engine, tracer, source, ism_order, n_rays, max_hops, record_paths, verbose=True):
-    """
-    Helper function to run both ISM and Ray Tracing for a single source.
-    This function is intended to be pickled and run in a separate process.
-    """
-    if verbose:
-        print(f"Simulating Source: {source.name} (PID: {os.getpid()})")
     
-    # 1. Run ISM
-    # Note: ism_engine.run modifies histograms in place on the receivers.
-    # Since we are in a separate process, the receivers in `ism_engine.room` are copies.
-    # We need to extract the histogram data to return it.
-    
-    # We need to clear histograms first because the room object might be reused in the worker 
-    # (though typically forking creates a copy, if using 'spawn' it's a fresh pickle)
+    # 1. Clear and run ISM
     for rx in ism_engine.room.receivers:
-        if isinstance(rx, AmbisonicReceiver):
-            for ch in rx.histograms:
-                rx.histograms[ch] = []
-        else:
-            rx.amplitude_histogram = []
+        rx.amplitude_histogram = []
+    ism_engine.run(source, max_order=ism_order, verbose=False)
 
-    ism_engine.run(source, max_order=ism_order, verbose=False) # Suppress internal print
-    
-    # 2. Run Ray Tracing
-    # RayTracer also modifies receivers in place or returns hits.
-    # We used to call: paths, _ = tracer.run(...)
-    # But now we need to ensure we capture the hits/histograms from RayTracer too.
-    # The RayTracer.run method updates the receivers in `tracer.room`.
-    # Pass min_ism_order to avoid double counting early reflections handled by ISM
-    paths, _ = tracer.run(source, n_rays, max_hops, record_paths=record_paths, min_ism_order=ism_order)
-    
-    # 3. Collect Histograms
-    # We return the histogram data for each receiver so the main process can reconstruct the RIRs.
+    # 2. Collect ISM results BEFORE ray tracer runs
+    ism_histograms = {}
+    for rx in ism_engine.room.receivers:
+        ism_histograms[rx.name] = [
+            (t, np.array(amp, dtype=complex), True) 
+            for t, amp in rx.amplitude_histogram
+        ]
+        print(f"[ISM collected] {rx.name}: {len(ism_histograms[rx.name])} entries")
+    # 3. Clear and run ray tracer on the same (shared) receivers
+    for rx in ism_engine.room.receivers:  # same object so only need to clear once
+        rx.amplitude_histogram = []
+    paths, _ = tracer.run(source, n_rays, max_hops, 
+                        record_paths=record_paths, min_ism_order=ism_order)
+
+    # 4. Collect ray tracer results
+    ray_histograms = {}
+    for rx in tracer.room.receivers:
+        ray_histograms[rx.name] = [
+            (t, np.array(amp, dtype=float), False) 
+            for t, amp in rx.amplitude_histogram
+        ]
+
+    # 5. Merge ISM + ray tracer
     receiver_histograms = {}
-    ism_receivers = {rx.name: rx for rx in ism_engine.room.receivers}
-    ray_receivers = {rx.name: rx for rx in tracer.room.receivers}
-
-    for rx_name in ism_receivers:
-        rx_ism = ism_receivers[rx_name]
-        rx_ray = ray_receivers.get(rx_name)
-
-        if isinstance(rx, AmbisonicReceiver):
-            merged = {}
-            for ch in rx_ism.channel_names: 
-                ism_hist = [(t, np.array(amp, dtype=complex), True)
-                            for t, amp in rx_ism.histograms[ch]]
-                ray_hist = [(t, np.array(amp, dtype=float), False)
-                            for t, amp in (rx_ray.histograms[ch] if rx_ray else [])]
-                merged[ch] = ism_hist + ray_hist 
-            receiver_histograms[rx_name] = merged
-        else:
-            ism_hist = [(t, np.array(amp, dtype=complex), True) 
-                    for t, amp in rx_ism.amplitude_histogram]
-            ray_hist = [(t, np.array(amp, dtype=float), False) 
-                    for t, amp in (rx_ray.amplitude_histogram if rx_ray else [])]
-            receiver_histograms[rx_name] = ism_hist + ray_hist
+    for rx_name in ism_histograms:
+        receiver_histograms[rx_name] = (
+            ism_histograms[rx_name] + ray_histograms.get(rx_name, [])
+        )
 
     return source.name, receiver_histograms, paths
 

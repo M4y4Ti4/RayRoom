@@ -95,7 +95,10 @@ def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True, collapse_
     indices = (times * fs).astype(int)
     for b in range(n_bands):
         np.add.at(rir[:, b], indices, final_amps[:, b])
-
+    print("\n--- First 5 histogram entries ---")
+    for i, entry in enumerate(histogram[:5]):
+        t, amp, is_ism_flag = entry if len(entry) == 3 else (*entry, "unknown")
+        print(f"  t={t:.4f}s  is_ism={is_ism_flag}  amp={np.real(amp)[:2]}")
     if collapse_bands:
         return rir.sum(axis=1)
     return rir

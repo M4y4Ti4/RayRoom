@@ -40,6 +40,9 @@ class RayTracer:
         self.air_absorption_db_m = air_absorption_coefficient(1000.0, temperature, humidity)
 
     def run(self, source, n_rays=10000, max_hops=50, energy_threshold=1e-6, record_paths=False, min_ism_order=-1):
+        
+        print(f"[RayTracer.run] min_ism_order={min_ism_order}")  # add this
+
         """
         Run the acoustic simulation for a single source.
 
@@ -147,23 +150,6 @@ class RayTracer:
         # We need to change `run` to return hits too if we want to use them.
         return collected_paths if record_paths else None, receiver_hits
 
-    def run(self, source, n_rays=10000, max_hops=50, energy_threshold=1e-6, record_paths=False, min_ism_order=-1):
-        """
-        Run the acoustic simulation for a single source.
-        ...
-        :return: Tuple (paths, hits).
-                 paths: Dictionary mapping source names to lists of ray paths if record_paths is True, else None.
-                 hits: List of dictionaries containing hit info {receiver, time, energy, direction}
-        """
-        if n_rays <= 0:
-            return ({} if record_paths else None), []
-
-        print(f"RayTracer starting for source: {source.name}")
-        paths, hits = self._trace_source(source, n_rays, max_hops, energy_threshold, record_paths, min_ism_order)
-
-        if record_paths:
-            return {source.name: paths}, hits
-        return None, hits
 
     def _trace_single_ray(
         self,
@@ -267,7 +253,9 @@ class RayTracer:
                         should_record = True
                         if is_pure_specular and hop <= min_ism_order:
                             should_record = False
-
+                            #print(f"[skip] hop={hop} min_ism_order={min_ism_order} is_pure_specular={is_pure_specular}")
+                        #else: 
+                            #print(f"[record] hop={hop} min_ism_order={min_ism_order} is_pure_specular={is_pure_specular}")
                         if should_record:
                             dist = total_dist + t_rx
                             time = dist / C_SOUND

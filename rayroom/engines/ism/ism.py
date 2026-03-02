@@ -147,6 +147,11 @@ class ImageSourceEngine:
         images.append(original)
 
         self._recursive_images(original, images, max_order)
+        order_counts = {}
+        
+        for img in images:
+            order_counts[img.order] = order_counts.get(img.order, 0) + 1
+            print(f"[ISM] image counts by order: {order_counts}")
         return images
 
     def _recursive_images(self, current_image, all_images, max_depth):
@@ -197,6 +202,7 @@ class ImageSourceEngine:
         :type images: list[ImageSource]
         """
         # For each image, check visibility path to receiver
+        print(f"[_process_receiver] called for receiver={receiver.name} with {len(images)} images")
         for img in images:
             result = self._construct_path(img, receiver)
 
@@ -207,6 +213,7 @@ class ImageSourceEngine:
 
             # Verify validity (intersections within polygons) and Occlusion
             if self._validate_path(path_points, walls_hit):
+                print(f"[valid path] order={img.order} time={np.sum([np.linalg.norm(path_points[i+1]-path_points[i]) for i in range(len(path_points)-1)])/343:.4f}s walls={[w.name if hasattr(w,'name') else id(w) for w in walls_hit]}")
                 # Calculate energy and time
                 self._record_reflection(
                     real_source, receiver, img, path_points, walls_hit
@@ -423,9 +430,9 @@ class ImageSourceEngine:
         k = 2 * np.pi * np.array(FREQ_BANDS) / C_SOUND
         total_phase += k * total_dist
         complex_amplitude = amplitude * np.exp(-1j * total_phase)
-        print(f"[ISM] complex_amplitude dtype: {complex_amplitude.dtype}")
-        print(f"[ISM] complex_amplitude: {complex_amplitude}")
-        receiver.record(time, complex_amplitude)
+        #print(f"[ISM] complex_amplitude dtype: {complex_amplitude.dtype}")
+        #print(f"[ISM] complex_amplitude: {complex_amplitude}")
+        print(f"[ISM record] time={time:.4f} order={image.order} receiver={receiver.name}")
         # Record
         if isinstance(receiver, AmbisonicReceiver):
             # Direction from last bounce (or source) to receiver
