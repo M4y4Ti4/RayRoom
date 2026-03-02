@@ -44,36 +44,215 @@ def get_material(name):
     """
     # Simplified values, ideally these would be frequency dependent arrays
     materials = {
-        "concrete": Material("Concrete", absorption=0.05, transmission=0.0, scattering=0.0),
-        "brick": Material("Brick", absorption=0.03, transmission=0.0, scattering=0.0),
-        "thick_carpet": Material("Thick Carpet", absorption=0.85, transmission=0.0, scattering=0.2),
-        "carpet": Material("Carpet", absorption=0.7, transmission=0.0, scattering=0.3),
-        "glass": Material("Glass", absorption=0.03, transmission=0.1, scattering=0.0),
-        "heavy_curtain": Material("Heavy Curtain", absorption=0.6, transmission=0.2, scattering=0.5),
-        "wood": Material("Wood", absorption=0.15, transmission=0.01, scattering=0.1),
-        "plaster": Material("Plaster", absorption=0.1, transmission=0.0, scattering=0.05),
-        "air": Material("Air", absorption=0.0, transmission=1.0, scattering=0.0),
-        "transparent_wall": Material("TransparentWall", absorption=0.1, transmission=0.8, scattering=0.0),
-        "human": Material("Human", absorption=0.5, transmission=0.0, scattering=0.5),
-        "asphalt": Material("Asphalt", absorption=0.1, transmission=0.0, scattering=0.1),
-        "grass": Material("Grass", absorption=0.5, transmission=0.0, scattering=0.6),
-        "soil": Material("Soil", absorption=0.3, transmission=0.0, scattering=0.7),
-        "metal": Material("Metal", absorption=0.05, transmission=0.0, scattering=0.1),
-        "fabric": Material("Fabric", absorption=0.4, transmission=0.05, scattering=0.4),
-        "leather": Material("Leather", absorption=0.25, transmission=0.0, scattering=0.2),
-        "tempered_glass": Material("Tempered Glass", absorption=0.02, transmission=0.01, scattering=0.05),
-        "marble": Material("Marble", absorption=0.01, transmission=0.0, scattering=0.1),
-        "acoustic_foam": Material("Acoustic Foam", absorption=0.95, transmission=0.0, scattering=0.7),
-        "drywall": Material("Drywall", absorption=0.08, transmission=0.0, scattering=0.1),
-        "water": Material("Water Surface", absorption=0.02, transmission=0.0, scattering=0.1),
-        "plywood": Material("Plywood", absorption=0.2, transmission=0.0, scattering=0.15),
-        "linoleum": Material("Linoleum", absorption=0.03, transmission=0.0, scattering=0.05),
-        "ceiling_tile": Material("Ceiling Tile", absorption=0.8, transmission=0.0, scattering=0.6),
-        "stucco": Material("Stucco", absorption=0.15, transmission=0.0, scattering=0.5),
-        "plastic": Material("Plastic", absorption=0.05, transmission=0.0, scattering=0.1),
-        "abs_plastic": Material("ABS Plastic", absorption=0.06, transmission=0.0, scattering=0.1),
-        "foam_cushion": Material("Foam Cushion", absorption=0.8, transmission=0.0, scattering=0.6),
-        "laminate": Material("Laminate", absorption=0.04, transmission=0.0, scattering=0.05),
-        "ceramic": Material("Ceramic", absorption=0.02, transmission=0.0, scattering=0.05),
-    }
+
+    "concrete": Material(
+        "Concrete",
+        absorption=[0.01, 0.01, 0.02, 0.02, 0.02, 0.05, 0.05],
+        transmission=0.0,
+        scattering=0.05
+    ),
+
+    "brick": Material(
+        "Brick",
+        absorption=[0.01, 0.02, 0.02, 0.03, 0.03, 0.04, 0.04],
+        transmission=0.0,
+        scattering=0.05
+    ),
+
+    "thick_carpet": Material(
+        "Thick Carpet",
+        absorption=[0.10, 0.30, 0.55, 0.70, 0.75, 0.80, 0.80],
+        transmission=0.0,
+        scattering=0.2
+    ),
+
+    "carpet": Material(
+        "Carpet",
+        absorption=[0.08, 0.25, 0.50, 0.65, 0.70, 0.75, 0.75],
+        transmission=0.0,
+        scattering=0.3
+    ),
+
+    "glass": Material(
+        "Glass",
+        absorption=[0.03, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02],
+        transmission=0.1,
+        scattering=0.02
+    ),
+
+    "heavy_curtain": Material(
+        "Heavy Curtain",
+        absorption=[0.10, 0.35, 0.55, 0.70, 0.70, 0.65, 0.60],
+        transmission=0.2,
+        scattering=0.5
+    ),
+
+    "wood": Material(
+        "Wood",
+        absorption=[0.15, 0.11, 0.10, 0.07, 0.06, 0.06, 0.07],
+        transmission=0.01,
+        scattering=0.1
+    ),
+
+    "plaster": Material(
+        "Plaster",
+        absorption=[0.14, 0.10, 0.06, 0.04, 0.02, 0.02, 0.02],
+        transmission=0.0,
+        scattering=0.05
+    ),
+
+    "transparent_wall": Material(
+        "TransparentWall",
+        absorption=[0.03, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02],
+        transmission=0.8,
+        scattering=0.0
+    ),
+
+    "human": Material(
+        "Human",
+        absorption=[0.30, 0.50, 0.60, 0.60, 0.70, 0.70, 0.70],
+        transmission=0.0,
+        scattering=0.5
+    ),
+
+    "asphalt": Material(
+        "Asphalt",
+        absorption=[0.05, 0.10, 0.15, 0.20, 0.20, 0.25, 0.25],
+        transmission=0.0,
+        scattering=0.1
+    ),
+
+    "grass": Material(
+        "Grass",
+        absorption=[0.20, 0.35, 0.55, 0.65, 0.70, 0.75, 0.75],
+        transmission=0.0,
+        scattering=0.6
+    ),
+
+    "soil": Material(
+        "Soil",
+        absorption=[0.15, 0.30, 0.45, 0.55, 0.60, 0.65, 0.65],
+        transmission=0.0,
+        scattering=0.7
+    ),
+
+    "metal": Material(
+        "Metal",
+        absorption=[0.01, 0.01, 0.02, 0.02, 0.02, 0.03, 0.03],
+        transmission=0.0,
+        scattering=0.1
+    ),
+
+    "fabric": Material(
+        "Fabric",
+        absorption=[0.10, 0.30, 0.50, 0.60, 0.65, 0.65, 0.60],
+        transmission=0.05,
+        scattering=0.4
+    ),
+
+    "leather": Material(
+        "Leather",
+        absorption=[0.05, 0.10, 0.20, 0.30, 0.35, 0.40, 0.40],
+        transmission=0.0,
+        scattering=0.2
+    ),
+
+    "tempered_glass": Material(
+        "Tempered Glass",
+        absorption=[0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02],
+        transmission=0.01,
+        scattering=0.05
+    ),
+
+    "marble": Material(
+        "Marble",
+        absorption=[0.01, 0.01, 0.01, 0.02, 0.02, 0.02, 0.02],
+        transmission=0.0,
+        scattering=0.1
+    ),
+
+    "acoustic_foam": Material(
+        "Acoustic Foam",
+        absorption=[0.30, 0.70, 0.90, 0.95, 0.95, 0.95, 0.95],
+        transmission=0.0,
+        scattering=0.7
+    ),
+
+    "drywall": Material(
+        "Drywall",
+        absorption=[0.15, 0.10, 0.06, 0.04, 0.02, 0.02, 0.02],
+        transmission=0.0,
+        scattering=0.1
+    ),
+
+    "water": Material(
+        "Water Surface",
+        absorption=[0.01, 0.01, 0.02, 0.02, 0.02, 0.02, 0.02],
+        transmission=0.0,
+        scattering=0.1
+    ),
+
+    "plywood": Material(
+        "Plywood",
+        absorption=[0.28, 0.22, 0.17, 0.09, 0.10, 0.11, 0.11],
+        transmission=0.0,
+        scattering=0.15
+    ),
+
+    "linoleum": Material(
+        "Linoleum",
+        absorption=[0.02, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03],
+        transmission=0.0,
+        scattering=0.05
+    ),
+
+    "ceiling_tile": Material(
+        "Ceiling Tile",
+        absorption=[0.50, 0.70, 0.85, 0.90, 0.90, 0.90, 0.85],
+        transmission=0.0,
+        scattering=0.6
+    ),
+
+    "stucco": Material(
+        "Stucco",
+        absorption=[0.05, 0.10, 0.15, 0.20, 0.20, 0.20, 0.20],
+        transmission=0.0,
+        scattering=0.5
+    ),
+
+    "plastic": Material(
+        "Plastic",
+        absorption=[0.02, 0.03, 0.04, 0.05, 0.05, 0.05, 0.05],
+        transmission=0.0,
+        scattering=0.1
+    ),
+
+    "abs_plastic": Material(
+        "ABS Plastic",
+        absorption=[0.02, 0.03, 0.05, 0.06, 0.06, 0.06, 0.06],
+        transmission=0.0,
+        scattering=0.1
+    ),
+
+    "foam_cushion": Material(
+        "Foam Cushion",
+        absorption=[0.30, 0.60, 0.80, 0.85, 0.85, 0.85, 0.85],
+        transmission=0.0,
+        scattering=0.6
+    ),
+
+    "laminate": Material(
+        "Laminate",
+        absorption=[0.02, 0.03, 0.04, 0.04, 0.04, 0.04, 0.04],
+        transmission=0.0,
+        scattering=0.05
+    ),
+
+    "ceramic": Material(
+        "Ceramic",
+        absorption=[0.01, 0.01, 0.02, 0.02, 0.02, 0.02, 0.02],
+        transmission=0.0,
+        scattering=0.05
+    ),
+}
     return materials.get(name, Material("Default", 0.1, 0.0, 0.0))

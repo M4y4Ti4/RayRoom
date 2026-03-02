@@ -1,7 +1,6 @@
 import numpy as np
 
-
-def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True):
+def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True, collapse_bands = False):
     """Generates a Room Impulse Response (RIR) from a time-energy histogram.
 
     This function converts a list of reflection arrival times and their
@@ -61,31 +60,42 @@ def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True):
     # Sort by time
     histogram.sort(key=lambda x: x[0])
 
-    times = np.array([t for t, _ in histogram])
-    energies = np.array([a for t, a in histogram])
+    if len(histogram[0]) == 3: 
+        times = np.array([t for t, _, _ in histogram])
+        raw_amps = [a for _, a, _ in histogram]
+        is_ism = np.array([flag for _, _, flag in histogram])
+    else: 
+        times = np.array([t for t, _ in histogram])
+        raw_amps = np.array([a for t, a in histogram])
+        is_ism = np.zeros(len(raw_amps), dtype = bool)
 
     # Discard late reflections
-    valid_indices = times < duration
-    times = times[valid_indices]
-    energies = energies[valid_indices]
+    valid = times < duration
+    times = times[valid]
+    raw_amps = [raw_amps[i] for i in range(len(raw_amps)) if valid[i]]
+    is_ism = is_ism[valid]
 
     if len(times) == 0:
-        return np.zeros((rir_len, energies.shape[1]))
+        return np.zeros((rir_len, len(raw_amps[0]) if raw_amps else 0))
     
-    n_bands = energies.shape[1]
+    n_bands = len(raw_amps[0])
+    final_amps = np.zeros((len(raw_amps), n_bands))
+    
 
-    if random_phase:
-        # Apply random sign flips to break phase coherence for diffuse sounds
-        signs = np.random.choice([-1, 1], size=len(energies))
-        energies *= signs[:, np.newaxis]
+    for i, (amp, ism) in enumerate(zip(raw_amps, is_ism)):
+        if ism:
+            final_amps[i] = np.real(amp)
+        else:
+            a = np.sqrt(np.real(amp))
+            if random_phase:
+                a *= np.random.choice([-1, 1])
+            final_amps[i] = a
 
-    # Create RIR
     rir = np.zeros((rir_len, n_bands))
-
-    # Place amplitudes in the RIR
     indices = (times * fs).astype(int)
-
     for b in range(n_bands):
-        np.add.at(rir[:, b], indices, energies[:, b])
-    # Handle multiple arrivals in the same sample bin
+        np.add.at(rir[:, b], indices, final_amps[:, b])
+
+    if collapse_bands:
+        return rir.sum(axis=1)
     return rir

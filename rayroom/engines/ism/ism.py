@@ -412,19 +412,27 @@ class ImageSourceEngine:
         energy *= 10**(-self.air_absorption_db_m * total_dist / 10.0)
 
         # Wall Absorption (Reflection coefficients)
+        total_phase = np.zeros(len(FREQ_BANDS))
         for wall in walls_hit:
             mat = wall.material #array, 7
-            abs_coeff = np.mean(mat.absorption) \
-                if np.ndim(mat.absorption) > 0 else mat.absorption
-            energy *= (1.0 - abs_coeff)
-
+            abs_coeff = mat.absorption
+            energy *= (1.0 - abs_coeff) #should be array of 7
+            total_phase += np.where(abs_coeff > 0.5, np.pi, 0.0)
+        
+        amplitude = np.sqrt(energy)
+        k = 2 * np.pi * np.array(FREQ_BANDS) / C_SOUND
+        total_phase += k * total_dist
+        complex_amplitude = amplitude * np.exp(-1j * total_phase)
+        print(f"[ISM] complex_amplitude dtype: {complex_amplitude.dtype}")
+        print(f"[ISM] complex_amplitude: {complex_amplitude}")
+        receiver.record(time, complex_amplitude)
         # Record
         if isinstance(receiver, AmbisonicReceiver):
             # Direction from last bounce (or source) to receiver
             arrival_dir = normalize(path_points[0] - path_points[1])
-            receiver.record(time, energy, arrival_dir)
+            receiver.record(time, complex_amplitude, arrival_dir)
         elif isinstance(receiver, Receiver):
-            receiver.record(time, energy)
+            receiver.record(time, complex_amplitude)
 
         if not hasattr(receiver, 'ism_paths'):
             receiver.ism_paths = []

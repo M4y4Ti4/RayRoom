@@ -45,11 +45,28 @@ def _run_hybrid_task(ism_engine, tracer, source, ism_order, n_rays, max_hops, re
     # 3. Collect Histograms
     # We return the histogram data for each receiver so the main process can reconstruct the RIRs.
     receiver_histograms = {}
-    for rx in ism_engine.room.receivers:
+    ism_receivers = {rx.name: rx for rx in ism_engine.room.receivers}
+    ray_receivers = {rx.name: rx for rx in tracer.room.receivers}
+
+    for rx_name in ism_receivers:
+        rx_ism = ism_receivers[rx_name]
+        rx_ray = ray_receivers.get(rx_name)
+
         if isinstance(rx, AmbisonicReceiver):
-            receiver_histograms[rx.name] = {ch: list(rx.histograms[ch]) for ch in rx.channel_names}
+            merged = {}
+            for ch in rx_ism.channel_names: 
+                ism_hist = [(t, np.array(amp, dtype=complex), True)
+                            for t, amp in rx_ism.histograms[ch]]
+                ray_hist = [(t, np.array(amp, dtype=float), False)
+                            for t, amp in (rx_ray.histograms[ch] if rx_ray else [])]
+                merged[ch] = ism_hist + ray_hist 
+            receiver_histograms[rx_name] = merged
         else:
-            receiver_histograms[rx.name] = list(rx.amplitude_histogram)
+            ism_hist = [(t, np.array(amp, dtype=complex), True) 
+                    for t, amp in rx_ism.amplitude_histogram]
+            ray_hist = [(t, np.array(amp, dtype=float), False) 
+                    for t, amp in (rx_ray.amplitude_histogram if rx_ray else [])]
+            receiver_histograms[rx_name] = ism_hist + ray_hist
 
     return source.name, receiver_histograms, paths
 
@@ -284,7 +301,7 @@ class HybridRenderer:
                     for ch_name in rx.channel_names:
                         hist = rx_hist_data.get(ch_name, [])
                         rir_ch = generate_rir(
-                            hist, self.fs, rir_duration, not interference
+                            hist, self.fs, rir_duration, random_phase=True
                         )
                         channel_rirs.append(rir_ch)
 
@@ -293,7 +310,7 @@ class HybridRenderer:
 
                 else:
                     hist = rx_hist_data if rx_hist_data is not None else []
-                    rir = generate_rir(hist, self.fs, rir_duration, not interference)
+                    rir = generate_rir(hist, self.fs, rir_duration, random_phase=True)
 
                 # Store the RIR, last source overwrites.
                 self.last_rirs[rx.name] = rir
