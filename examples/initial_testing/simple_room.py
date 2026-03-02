@@ -39,8 +39,10 @@ def main():
     tracer = HybridRenderer(room)
 
     #setting source to a delta function: 
-    delta_impulse = np.zeros(1)
-    delta_impulse[0] = 1.0
+    fs = 44100
+    impulse_length = 128 * fs  # 128 samples = ~2.9 ms
+    delta_impulse = np.zeros(impulse_length)
+    delta_impulse[0] = 1.0  # first sample is 1
     tracer.set_source_audio(source, delta_impulse)
 
     print("Starting simulation...")
@@ -55,15 +57,20 @@ def main():
             parallel = False)
     rir_array = rirs[receiver1.name]
     rir_total = rir_array.sum(axis=1)
-
+    np.save("rir_total", rir_total)
     t = np.linspace(0, 1.0, len(rir_total))
-
     plt.figure()
     plt.plot(t, rir_total)
     plt.xlabel("time")
     plt.ylabel("amplitude")
     plt.title("RIR")
     plt.show()
+
+    # Optional: scaled WAV for HRTF convolution
+    import soundfile as sf
+    rir_scaled = rir_total / np.max(np.abs(rir_total))
+    print(len(rir_scaled))
+    sf.write("rir_total.wav", rir_scaled.astype('float32'), samplerate=fs)
 
     times, energies = zip(*receiver1.amplitude_histogram)
     times = np.array(times)
@@ -79,7 +86,6 @@ def main():
     
     plt.show()
 
-  
     """
     #access image sources
     image_sources = tracer.ism_engine.last_image_sources
