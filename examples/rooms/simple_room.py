@@ -12,12 +12,12 @@ def main():
     # 1. Create Room (Shoebox 5m x 4m x 3m)
     # Different materials for walls
     mats = {
-        "floor": get_material("wood"),
-        "ceiling": get_material("plaster"),
+        "floor": get_material("carpet"),
+        "ceiling": get_material("drywall"),
         "front": get_material("brick"),
         "back": get_material("brick"),
-        "left": get_material("concrete"),
-        "right": get_material("glass")
+        "left": get_material("brick"),
+        "right": get_material("brick")
     }
 
     room = Room.create_shoebox([5, 4, 3], materials=mats)
@@ -45,14 +45,26 @@ def main():
 
     print("Starting simulation...")
     #tracer.generate_rir_only(source, n_rays=20000, max_hops=30)
-    orirs, all_paths = tracer.render(n_rays=1000,
-            max_hops=30,
+    rirs, all_paths = tracer.render(n_rays=10000,
+            max_hops=100,
             rir_duration=1.0,
             record_paths=True,
             interference=False,
             ism_order=2,         # Enable Hybrid Mode
-            show_path_plot=True)
-    
+            show_path_plot=True, 
+            parallel = False)
+    rir_array = rirs[receiver1.name]
+    rir_total = rir_array.sum(axis=1)
+
+    t = np.linspace(0, 1.0, len(rir_total))
+
+    plt.figure()
+    plt.plot(t, rir_total)
+    plt.xlabel("time")
+    plt.ylabel("amplitude")
+    plt.title("RIR")
+    plt.show()
+
     times, energies = zip(*receiver1.amplitude_histogram)
     times = np.array(times)
     energies = np.array(energies)
@@ -67,7 +79,8 @@ def main():
     
     plt.show()
 
-"""
+  
+    """
     #access image sources
     image_sources = tracer.ism_engine.last_image_sources
     print(len(image_sources))
@@ -84,28 +97,7 @@ def main():
     
     print(f"valid paths for receiver1: {len(receiver1.ism_paths)}")
 
-
-    # 4. Analyze Results
-    print(f"Receiver 1 recorded {len(receiver1.amplitude_histogram)} hits.")
- 
-    if len(receiver1.amplitude_histogram) > 0:
-        times1, energies1 = zip(*receiver1.amplitude_histogram)
-        times1 = np.array(times1)
-        energies1 = np.array(energies1)
-        print(times1, energies1)
-        # Plot Impulse Response (Histogram)
-        plt.figure(figsize=(10, 6))
-        plt.hist(times1, bins=50, weights=energies1, alpha=0.7, label="Energy")
-        plt.xlabel("Time (s)")
-        plt.ylabel("Energy")
-        plt.title("Room Impulse Response (Energy Time Curve)")
-        plt.grid(True)
-        plt.savefig("impulse_response_shoebox.png")
-        print("Saved impulse_response.png")
-    else:
-        print("No energy received at microphone.")
-    
-    np.savez('IR_data', times=times1, energies=energies1)
 """
+
 if __name__ == "__main__":
     main()
