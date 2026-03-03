@@ -2,6 +2,7 @@ import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from rayroom.core.utils import sum_frequency_bands, plot_transfer_function 
 
 from rayroom import Room, Source, Receiver, Person, RayTracer, get_material, HybridRenderer
 
@@ -56,7 +57,25 @@ def main():
             show_path_plot=True, 
             parallel = False)
     rir_array = rirs[receiver1.name]
-    rir_total = rir_array.sum(axis=1)
+    rir_total = sum_frequency_bands(rir_array, fs = 44100) #band-pass and sum each frequency band to produce broadband RIR
+
+    print(f"rir_total max freq content: {np.argmax(np.abs(np.fft.rfft(rir_total)))}")
+    print(f"rir_array shape: {rir_array.shape}")
+    print(f"rir_total shape: {rir_total.shape}")
+
+    t = np.linspace(0, 1.0, len(rir_total))
+    plt.figure()
+    plt.plot(t, rir_total)
+    plt.xlabel("Time (s)")
+    plt.ylabel("Amplitude")
+    plt.show()
+
+    plot_transfer_function(rir_total, fs=44100)
+    
+
+
+
+    """
     np.save("rir_total", rir_total)
     t = np.linspace(0, 1.0, len(rir_total))
     plt.figure()
@@ -85,7 +104,7 @@ def main():
         plt.hist(times, bins = 50, weights=energies[:,b], alpha=0.2, color=colors[b], label=f'Band{b+1}')
     
     plt.show()
-
+"""
     """
     #access image sources
     image_sources = tracer.ism_engine.last_image_sources
