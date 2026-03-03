@@ -42,215 +42,208 @@ def get_material(name):
     :return: A Material object.
     :rtype: rayroom.materials.Material
     """
-    # Simplified values, ideally these would be frequency dependent arrays
+    # absorption coeff. taken from ODEON materials database
+    # given for frequencies with octave band centre freq. [63, 125, 250, 500, 1000, 2000, 4000]
     materials = {
-
-    "concrete": Material(
-        "Concrete",
-        absorption=[0.01, 0.01, 0.02, 0.02, 0.02, 0.05, 0.05],
+        "concrete": Material(
+        "Concrete",                          # Ref: 100 Rough concrete
+        absorption=[0.02, 0.02, 0.03, 0.03, 0.03, 0.04, 0.07],
         transmission=0.0,
         scattering=0.05
     ),
 
     "brick": Material(
-        "Brick",
-        absorption=[0.01, 0.02, 0.02, 0.03, 0.03, 0.04, 0.04],
+        "Brick",                             # Ref: 1001 Smooth brickwork with flush pointing
+        absorption=[0.02, 0.03, 0.03, 0.04, 0.05, 0.07, 0.07],
         transmission=0.0,
         scattering=0.05
     ),
 
     "thick_carpet": Material(
-        "Thick Carpet",
-        absorption=[0.10, 0.30, 0.55, 0.70, 0.75, 0.80, 0.80],
+        "Thick Carpet",                      # Ref: 7005 Carpet heavy on hairfelt or foam rubber
+        absorption=[0.08, 0.24, 0.57, 0.69, 0.71, 0.73, 0.73],
         transmission=0.0,
         scattering=0.2
     ),
 
     "carpet": Material(
-        "Carpet",
-        absorption=[0.08, 0.25, 0.50, 0.65, 0.70, 0.75, 0.75],
+        "Carpet",                            # Ref: 7001 6mm pile carpet bonded to closed-cell foam
+        absorption=[0.03, 0.09, 0.25, 0.31, 0.33, 0.44, 0.44],
         transmission=0.0,
         scattering=0.3
     ),
 
     "glass": Material(
-        "Glass",
-        absorption=[0.03, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02],
+        "Glass",                             # Ref: 10002 Single pane of glass 3mm
+        absorption=[0.08, 0.04, 0.03, 0.03, 0.02, 0.02, 0.02],
         transmission=0.1,
         scattering=0.02
     ),
 
     "heavy_curtain": Material(
-        "Heavy Curtain",
-        absorption=[0.10, 0.35, 0.55, 0.70, 0.70, 0.65, 0.60],
+        "Heavy Curtain",                     # Ref: 8010 Drapes heavy velour
+        absorption=[0.14, 0.35, 0.55, 0.72, 0.70, 0.65, 0.65],
         transmission=0.2,
         scattering=0.5
     ),
 
     "wood": Material(
-        "Wood",
-        absorption=[0.15, 0.11, 0.10, 0.07, 0.06, 0.06, 0.07],
+        "Wood",                              # Ref: 3004 Wooden floor on joists
+        absorption=[0.15, 0.11, 0.10, 0.07, 0.06, 0.07, 0.07],
         transmission=0.01,
         scattering=0.1
     ),
 
     "plaster": Material(
-        "Plaster",
-        absorption=[0.14, 0.10, 0.06, 0.04, 0.02, 0.02, 0.02],
+        "Plaster",                           # Ref: 4000 Lime cement plaster
+        absorption=[0.02, 0.02, 0.03, 0.04, 0.05, 0.05, 0.05],
         transmission=0.0,
         scattering=0.05
     ),
 
     "transparent_wall": Material(
-        "TransparentWall",
-        absorption=[0.03, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02],
+        "TransparentWall",                   # Ref: 10003 Double glazing 2-3mm glass 10mm gap
+        absorption=[0.10, 0.07, 0.05, 0.03, 0.02, 0.02, 0.02],
         transmission=0.8,
         scattering=0.0
     ),
 
     "human": Material(
-        "Human",
-        absorption=[0.30, 0.50, 0.60, 0.60, 0.70, 0.70, 0.70],
+        "Human",                             # Ref: 11050 Person in suit
+        absorption=[0.15, 0.23, 0.56, 0.78, 0.88, 0.89, 0.89],
         transmission=0.0,
         scattering=0.5
     ),
 
     "asphalt": Material(
-        "Asphalt",
+        "Asphalt",                           # No direct match — kept as estimate
         absorption=[0.05, 0.10, 0.15, 0.20, 0.20, 0.25, 0.25],
         transmission=0.0,
         scattering=0.1
     ),
 
     "grass": Material(
-        "Grass",
+        "Grass",                             # No direct match — kept as estimate
         absorption=[0.20, 0.35, 0.55, 0.65, 0.70, 0.75, 0.75],
         transmission=0.0,
         scattering=0.6
     ),
 
     "soil": Material(
-        "Soil",
-        absorption=[0.15, 0.30, 0.45, 0.55, 0.60, 0.65, 0.65],
+        "Soil",                              # Ref: 9001 Sand 100mm thickness
+        absorption=[0.15, 0.35, 0.40, 0.50, 0.55, 0.80, 0.80],
         transmission=0.0,
         scattering=0.7
     ),
 
     "metal": Material(
-        "Metal",
-        absorption=[0.01, 0.01, 0.02, 0.02, 0.02, 0.03, 0.03],
+        "Metal",                             # Ref: 5000 Steel trapez profile
+        absorption=[0.30, 0.25, 0.20, 0.10, 0.10, 0.15, 0.15],
         transmission=0.0,
         scattering=0.1
     ),
 
     "fabric": Material(
-        "Fabric",
-        absorption=[0.10, 0.30, 0.50, 0.60, 0.65, 0.65, 0.60],
+        "Fabric",                            # Ref: 8009 Medium velour draped to half area
+        absorption=[0.07, 0.31, 0.49, 0.75, 0.70, 0.60, 0.60],
         transmission=0.05,
         scattering=0.4
     ),
 
     "leather": Material(
-        "Leather",
+        "Leather",                           # No direct match — kept as estimate
         absorption=[0.05, 0.10, 0.20, 0.30, 0.35, 0.40, 0.40],
         transmission=0.0,
         scattering=0.2
     ),
 
     "tempered_glass": Material(
-        "Tempered Glass",
+        "Tempered Glass",                    # Ref: 10000 Solid glass blocks
         absorption=[0.02, 0.02, 0.02, 0.02, 0.02, 0.02, 0.02],
         transmission=0.01,
         scattering=0.05
     ),
 
     "marble": Material(
-        "Marble",
-        absorption=[0.01, 0.01, 0.01, 0.02, 0.02, 0.02, 0.02],
+        "Marble",                            # Ref: 2001 Marble or glazed tile
+        absorption=[0.01, 0.01, 0.01, 0.01, 0.02, 0.02, 0.02],
         transmission=0.0,
         scattering=0.1
     ),
 
     "acoustic_foam": Material(
-        "Acoustic Foam",
-        absorption=[0.30, 0.70, 0.90, 0.95, 0.95, 0.95, 0.95],
+        "Acoustic Foam",                     # Ref: 12002 2.5cm mineral fiber spray-on
+        absorption=[0.16, 0.45, 0.70, 0.90, 0.90, 0.85, 0.85],
         transmission=0.0,
         scattering=0.7
     ),
 
     "drywall": Material(
-        "Drywall",
-        absorption=[0.15, 0.10, 0.06, 0.04, 0.02, 0.02, 0.02],
+        "Drywall",                           # Ref: 4042 Plasterboard 13mm 100mm empty cavity
+        absorption=[0.08, 0.11, 0.05, 0.03, 0.02, 0.03, 0.03],
         transmission=0.0,
         scattering=0.1
     ),
 
     "water": Material(
-        "Water Surface",
-        absorption=[0.01, 0.01, 0.02, 0.02, 0.02, 0.02, 0.02],
+        "Water Surface",                     # Ref: 9000 Water surface in swimming pool
+        absorption=[0.01, 0.01, 0.01, 0.01, 0.02, 0.02, 0.02],
         transmission=0.0,
         scattering=0.1
     ),
 
     "plywood": Material(
-        "Plywood",
-        absorption=[0.28, 0.22, 0.17, 0.09, 0.10, 0.11, 0.11],
+        "Plywood",                           # Ref: 3063 Thin plywood paneling
+        absorption=[0.42, 0.21, 0.10, 0.08, 0.06, 0.06, 0.06],
         transmission=0.0,
         scattering=0.15
     ),
 
     "linoleum": Material(
-        "Linoleum",
-        absorption=[0.02, 0.03, 0.03, 0.03, 0.03, 0.03, 0.03],
+        "Linoleum",                          # Ref: 6000 Linoleum or vinyl stuck to concrete
+        absorption=[0.02, 0.02, 0.03, 0.04, 0.04, 0.05, 0.05],
         transmission=0.0,
         scattering=0.05
     ),
 
     "ceiling_tile": Material(
-        "Ceiling Tile",
-        absorption=[0.50, 0.70, 0.85, 0.90, 0.90, 0.90, 0.85],
+        "Ceiling Tile",                      # Ref: 12000 1.27cm mineral fiber spray-on
+        absorption=[0.05, 0.15, 0.45, 0.70, 0.80, 0.80, 0.80],
         transmission=0.0,
         scattering=0.6
     ),
 
     "stucco": Material(
-        "Stucco",
-        absorption=[0.05, 0.10, 0.15, 0.20, 0.20, 0.20, 0.20],
+        "Stucco",                            # Ref: 4035 Plaster rough finish on lath
+        absorption=[0.14, 0.10, 0.06, 0.05, 0.04, 0.03, 0.03],
         transmission=0.0,
         scattering=0.5
     ),
 
     "plastic": Material(
-        "Plastic",
-        absorption=[0.02, 0.03, 0.04, 0.05, 0.05, 0.05, 0.05],
-        transmission=0.0,
-        scattering=0.1
-    ),
-
-    "abs_plastic": Material(
-        "ABS Plastic",
-        absorption=[0.02, 0.03, 0.05, 0.06, 0.06, 0.06, 0.06],
+        "Plastic",                           # Ref: 102 Smooth concrete painted/glazed (closest hard smooth surface)
+        absorption=[0.01, 0.01, 0.01, 0.02, 0.02, 0.02, 0.02],
         transmission=0.0,
         scattering=0.1
     ),
 
     "foam_cushion": Material(
-        "Foam Cushion",
-        absorption=[0.30, 0.60, 0.80, 0.85, 0.85, 0.85, 0.85],
+        "Foam Cushion",                      # Ref: 11006 Empty chairs upholstered cloth cover
+        absorption=[0.44, 0.60, 0.77, 0.89, 0.82, 0.70, 0.70],
         transmission=0.0,
         scattering=0.6
     ),
 
     "laminate": Material(
-        "Laminate",
-        absorption=[0.02, 0.03, 0.04, 0.04, 0.04, 0.04, 0.04],
+        "Laminate",                          # Ref: 3002 Wood parquet in asphalt on concrete
+        absorption=[0.04, 0.04, 0.07, 0.06, 0.06, 0.07, 0.07],
         transmission=0.0,
         scattering=0.05
     ),
 
     "ceramic": Material(
-        "Ceramic",
-        absorption=[0.01, 0.01, 0.02, 0.02, 0.02, 0.02, 0.02],
+        "Ceramic",                           # Ref: 2001 Marble or glazed tile
+        absorption=[0.01, 0.01, 0.01, 0.01, 0.02, 0.02, 0.02],
         transmission=0.0,
         scattering=0.05
     ),
