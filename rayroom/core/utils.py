@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.signal import butter, sosfilt
 
 def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True, collapse_bands = False):
     """Generates a Room Impulse Response (RIR) from a time-energy histogram.
@@ -102,3 +103,66 @@ def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True, collapse_
     if collapse_bands:
         return rir.sum(axis=1)
     return rir
+
+def bandpass_filter(signal, low_freq, high_freq, fs, order=4):
+    """apply a bandpass filter to the frequency bands in order to sum and produce a broadband signal
+    param signal: input signal
+    param low_freq: lower cutoff of filter in Hz
+    param high_freq: upper cutoff of filter in Hz
+    param fs: sampling freq of signal in Hz
+    papram order: order of the filter 
+    
+    """
+    nyq = fs/2
+    low = low_freq / nyq
+    high = high_freq / nyq
+    low = max(low, 1e-6)
+    high = min(high, 1.0-1e-6)
+    sos = butter(order, [low,high], btype='band', output='sos')
+    return sosfilt(sos, signal)
+
+def sum_frequency_bands(rir_array, fs, freq_bands=None):
+    """ Sum frequency band RIRs with band pass filtering
+    
+    param rir_array: RIR array, shape (n_samples, n_bands)
+    param fs: sampling frequency in Hz
+    param freq_bands: list of octave band centre frequencies 
+    return: summed RIR of shape(n_samples)
+    """
+    if freq_bands is None: 
+        freq_bands = [63, 125, 250, 500, 1000, 2000, 4000]
+    
+    n_samples, n_bands = rir_array.shape
+    rir_summed = np.zeros(n_samples)
+
+    for b in range(n_bands):
+        low = freq_bands[b] / np.sqrt(2)
+        high = freq_bands[b] * np.sqrt(2)
+        filtered = bandpass_filter(rir_array[:, b], low, high, fs)
+        rir_summed += filtered
+    
+    return rir_summed
+
+def plot_transfer_function(rir_total, fs):
+    import matplotlib.pyplot as plt
+    import matplotlib
+    n = len(rir_total)
+
+    H = np.fft.rfft(rir_total, n=n)
+    freqs = np.fft.rfftfreq(n, d=1/fs)
+
+    magnitude_db = 20 * np.log10(np.abs(H) + 1e-12)
+
+    fig, ax = plt.subplots(figsize=(12, 5))
+    ax.plot(freqs, magnitude_db)
+    ax.set_xlabel("Frequency (Hz)")
+    ax.set_ylabel("Magnitude (dB)")
+    ax.set_title("Transfer Function")
+    ax.set_xlim([0, 120])
+    ax.set_ylim([-60, 10])
+    ax.grid(True, which='both', alpha=0.3)
+    #ax.set_xticks([63, 125, 250, 500, 1000, 2000, 4000])
+    #ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, _: str(int(x))))
+    plt.show()
+
+
