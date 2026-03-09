@@ -134,35 +134,16 @@ def sum_frequency_bands(rir_array, fs, freq_bands=None):
     
     n_samples, n_bands = rir_array.shape
     rir_summed = np.zeros(n_samples)
+    filtered = []
 
     for b in range(n_bands):
         low = freq_bands[b] / np.sqrt(2)
         high = freq_bands[b] * np.sqrt(2)
-        filtered = bandpass_filter(rir_array[:, b], low, high, fs)
-        rir_summed += filtered
+        filtered_band = bandpass_filter(rir_array[:, b], low, high, fs)
+        filtered.append(filtered_band)
+        rir_summed += filtered_band
     
-    return rir_summed
+    return rir_summed, filtered 
 
-def plot_transfer_function(rir_total, fs):
-    import matplotlib.pyplot as plt
-    import matplotlib
-    n = len(rir_total)
-
-    H = np.fft.rfft(rir_total, n=n)
-    freqs = np.fft.rfftfreq(n, d=1/fs)
-
-    magnitude_db = 20 * np.log10(np.abs(H) + 1e-12)
-
-    fig, ax = plt.subplots(figsize=(12, 5))
-    ax.plot(freqs, magnitude_db)
-    ax.set_xlabel("Frequency (Hz)")
-    ax.set_ylabel("Magnitude (dB)")
-    ax.set_title("Transfer Function")
-    ax.set_xlim([0, 120])
-    ax.set_ylim([-60, 10])
-    ax.grid(True, which='both', alpha=0.3)
-    #ax.set_xticks([63, 125, 250, 500, 1000, 2000, 4000])
-    #ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, _: str(int(x))))
-    plt.show()
 
 

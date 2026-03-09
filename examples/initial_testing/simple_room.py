@@ -2,9 +2,10 @@ import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-from rayroom.core.utils import sum_frequency_bands, plot_transfer_function 
-
+from rayroom.core.utils import sum_frequency_bands, 
+from rayroom.core.data_anal import plot_transfer_function
 from rayroom import Room, Source, Receiver, Person, RayTracer, get_material, HybridRenderer
+from rayroom.core.data_anal import plot_rir, plot_transfer_function
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -29,7 +30,7 @@ def main():
     room.add_source(source)
 
     # Receiver (Microphone) at (4, 3, 1.5)
-    receiver1 = Receiver("persona", [4, 3, 1.5], radius=0.2)
+    receiver1 = Receiver("persona", [1.5, 2.5, 1.5], radius=0.2)
     room.add_receiver(receiver1)
 
     # Plot Room BEFORE Simulation (Check geometry)
@@ -41,88 +42,32 @@ def main():
 
     #setting source to a delta function: 
     fs = 44100
-    impulse_length = 128 * fs  # 128 samples = ~2.9 ms
+    impulse_length = 128   # 128 samples = ~2.9 ms
     delta_impulse = np.zeros(impulse_length)
-    delta_impulse[0] = 1.0  # first sample is 1
+    delta_impulse[0] = 2.0  # first sample is 1
     tracer.set_source_audio(source, delta_impulse)
 
     print("Starting simulation...")
     #tracer.generate_rir_only(source, n_rays=20000, max_hops=30)
-    rirs, all_paths = tracer.render(n_rays=10000,
-            max_hops=100,
-            rir_duration=1.0,
+    rirs, all_paths = tracer.render(n_rays=20000,
+            max_hops=150,
+            rir_duration=2.0,
             record_paths=True,
             interference=False,
             ism_order=2,         # Enable Hybrid Mode
             show_path_plot=True, 
             parallel = False)
     rir_array = rirs[receiver1.name]
+    rir_bands = 
     rir_total = sum_frequency_bands(rir_array, fs = 44100) #band-pass and sum each frequency band to produce broadband RIR
 
     print(f"rir_total max freq content: {np.argmax(np.abs(np.fft.rfft(rir_total)))}")
     print(f"rir_array shape: {rir_array.shape}")
     print(f"rir_total shape: {rir_total.shape}")
 
-    t = np.linspace(0, 1.0, len(rir_total))
-    plt.figure()
-    plt.plot(t, rir_total)
-    plt.xlabel("Time (s)")
-    plt.ylabel("Amplitude")
-    plt.show()
+    plot_rir(rir_total, fs = 44100) #plot the RIR of all frequencies 
 
-    plot_transfer_function(rir_total, fs=44100)
-    
-
-
-
-    """
-    np.save("rir_total", rir_total)
-    t = np.linspace(0, 1.0, len(rir_total))
-    plt.figure()
-    plt.plot(t, rir_total)
-    plt.xlabel("time")
-    plt.ylabel("amplitude")
-    plt.title("RIR")
-    plt.show()
-
-    # Optional: scaled WAV for HRTF convolution
-    import soundfile as sf
-    rir_scaled = rir_total / np.max(np.abs(rir_total))
-    print(len(rir_scaled))
-    sf.write("rir_total.wav", rir_scaled.astype('float32'), samplerate=fs)
-
-    times, energies = zip(*receiver1.amplitude_histogram)
-    times = np.array(times)
-    energies = np.array(energies)
-
-    plt.figure()
-
-    N_BANDS = energies.shape[1]
-    colors = plt.cm.viridis(np.linspace(0,1,N_BANDS))
-
-    for b in range(N_BANDS):
-        plt.hist(times, bins = 50, weights=energies[:,b], alpha=0.2, color=colors[b], label=f'Band{b+1}')
-    
-    plt.show()
-"""
-    """
-    #access image sources
-    image_sources = tracer.ism_engine.last_image_sources
-    print(len(image_sources))
-
-
-    #access ray_paths
-    ray_paths = all_paths.get(source.name, [])
-    print(f"Recorded {len(ray_paths)} ray paths")
-    
-    for path in receiver1.ism_paths:
-        print(f"Order {path['order']}, time={path['time']:.4f}s, energy={path['energy']}")
-        for p in path['points']:
-            print(f"  {np.round(p, 3)}")
-    
-    print(f"valid paths for receiver1: {len(receiver1.ism_paths)}")
-
-"""
+    plot_transfer_function(rir_total, fs = 44100) #plot the transfer function for all frequencies 
 
 if __name__ == "__main__":
     main()

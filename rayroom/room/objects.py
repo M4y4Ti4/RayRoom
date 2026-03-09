@@ -73,7 +73,7 @@ class Receiver(Object3D):
         self.radius = radius
         self.amplitude_histogram = []  # To store arriving energy packets (time, amplitude)
 
-    def record(self, time, energy):
+    def record(self, time, value, is_ism = False, az = None, el = None):
         """
         Record an energy packet arrival.
 
@@ -83,7 +83,7 @@ class Receiver(Object3D):
         :type energy: float or np.ndarray
         """
         # Convert energy to amplitude
-        self.amplitude_histogram.append((time, energy))
+        self.amplitude_histogram.append((time, value, is_ism, az, el))
 
 
 class AmbisonicReceiver(Object3D):
@@ -178,8 +178,6 @@ class AmbisonicReceiver(Object3D):
         if energy < 0:
             return
 
-        amplitude = np.sqrt(energy)
-
         # Project direction onto local axes
         x = np.dot(direction, self.x_axis)
         y = np.dot(direction, self.y_axis)
@@ -216,7 +214,7 @@ class AmbisonicReceiver(Object3D):
 
         # Append to histograms
         for ch, gain in gains.items():
-            self.histograms[ch].append((time, amplitude * gain))
+            self.histograms[ch].append((time, energy * gain))
 
 
 class Furniture(Object3D):

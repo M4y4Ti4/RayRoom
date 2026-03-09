@@ -22,7 +22,7 @@ def _run_hybrid_task(ism_engine, tracer, source, ism_order, n_rays, max_hops, re
     for rx in ism_engine.room.receivers:
         ism_histograms[rx.name] = [
             (t, np.array(amp, dtype=complex), True) 
-            for t, amp in rx.amplitude_histogram
+            for t, amp, _, _, _, in rx.amplitude_histogram
         ]
         print(f"[ISM collected] {rx.name}: {len(ism_histograms[rx.name])} entries")
     # 3. Clear and run ray tracer on the same (shared) receivers
@@ -36,7 +36,7 @@ def _run_hybrid_task(ism_engine, tracer, source, ism_order, n_rays, max_hops, re
     for rx in tracer.room.receivers:
         ray_histograms[rx.name] = [
             (t, np.array(amp, dtype=float), False) 
-            for t, amp in rx.amplitude_histogram
+            for t, amp, _, _, _, in rx.amplitude_histogram
         ]
 
     # 5. Merge ISM + ray tracer

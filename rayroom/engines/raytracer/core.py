@@ -269,18 +269,23 @@ class RayTracer:
                             
                             # Storing hit info: (receiver_name, time, energy, direction)
                             energy_array = np.full(N_BANDS, current_energy)
+                            az = float(np.random.uniform(0, 360))
+                            el = float(np.random.choice([-30, -15, 0, 15, 30]))
+
                             hit_info = {
                                 'receiver_name': receiver.name,
                                 'time': time,
                                 'energy': energy_array.copy(),
-                                'direction': ray_dir
+                                'direction': ray_dir,
+                                'azimuth': az,
+                                'elevation': el
                             }
                             hit_results.append(hit_info)
                             
                             if isinstance(receiver, AmbisonicReceiver):
                                 receiver.record(time, energy_array, ray_dir)
                             else:
-                                receiver.record(time, energy_array)
+                                receiver.record(time, energy_array, is_ism = False, az = az, el = el)
 
 
             # 3. Handle Wall Hit

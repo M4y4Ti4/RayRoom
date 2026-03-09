@@ -439,7 +439,10 @@ class ImageSourceEngine:
             arrival_dir = normalize(path_points[0] - path_points[1])
             receiver.record(time, complex_amplitude, arrival_dir)
         elif isinstance(receiver, Receiver):
-            receiver.record(time, complex_amplitude)
+            arrival_dir = normalize(path_points[0] - path_points[1])
+            az = np.degrees(np.arctan2(arrival_dir[0], arrival_dir[1]))
+            el = np.degrees(np.arctan2(arrival_dir[2], np.sqrt(arrival_dir[0]**2 + arrival_dir[1]**2)))
+            receiver.record(time, complex_amplitude, is_ism=True, az=az, el=el)
 
         if not hasattr(receiver, 'ism_paths'):
             receiver.ism_paths = []
@@ -447,5 +450,9 @@ class ImageSourceEngine:
                                    'walls': walls_hit, 
                                    'order': image.order,
                                    'energy': energy, 
-                                   'time': time
+                                   'time': time,
+                                   'complex_amp': complex_amplitude,
+                                   'arrival_dir': arrival_dir,
+                                   'azimuth': az,
+                                   'elevation': el
                                    })
