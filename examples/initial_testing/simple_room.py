@@ -2,7 +2,7 @@ import os
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-from rayroom.core.utils import sum_frequency_bands, 
+from rayroom.core.utils import sum_frequency_bands
 from rayroom.core.data_anal import plot_transfer_function
 from rayroom import Room, Source, Receiver, Person, RayTracer, get_material, HybridRenderer
 from rayroom.core.data_anal import plot_rir, plot_transfer_function
@@ -26,11 +26,11 @@ def main():
 
     # 2. Add Objects
     # Source at (1, 1, 1.5)
-    source = Source("Speaker", [1, 1, 1.5], power=1.0)
+    source    = Source("Speaker", [3.04, 2.59, 1.62], power=1.0)
     room.add_source(source)
 
     # Receiver (Microphone) at (4, 3, 1.5)
-    receiver1 = Receiver("persona", [1.5, 2.5, 1.5], radius=0.2)
+    receiver1 = Receiver("persona", [4.26, 1.76, 1.62], radius=0.2)
     room.add_receiver(receiver1)
 
     # Plot Room BEFORE Simulation (Check geometry)
@@ -58,8 +58,7 @@ def main():
             show_path_plot=True, 
             parallel = False)
     rir_array = rirs[receiver1.name]
-    rir_bands = 
-    rir_total = sum_frequency_bands(rir_array, fs = 44100) #band-pass and sum each frequency band to produce broadband RIR
+    rir_total, rir_bands = sum_frequency_bands(rir_array, fs = 44100) #band-pass and sum each frequency band to produce broadband RIR
 
     print(f"rir_total max freq content: {np.argmax(np.abs(np.fft.rfft(rir_total)))}")
     print(f"rir_array shape: {rir_array.shape}")
