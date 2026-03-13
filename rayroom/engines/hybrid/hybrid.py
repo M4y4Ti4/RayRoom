@@ -288,7 +288,7 @@ class HybridRenderer:
 
                 else:
                     hist = rx_hist_data if rx_hist_data is not None else []
-                    rir = generate_rir(hist, self.fs, rir_duration, random_phase=True)
+                    rir = generate_rir(hist, self.fs, rir_duration, random_phase=True, interference = True)
 
                 # Store the RIR, last source overwrites.
                 self.last_rirs[rx.name] = rir

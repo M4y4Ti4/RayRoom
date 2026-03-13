@@ -11,7 +11,37 @@ import json
 from ..room.objects import AmbisonicReceiver
 from importlib import resources
 import jinja2
+from rayroom.core.utils import sum_frequency_bands
 
+def debug_schroeder_curves(rir, fs):
+    bands = [63, 125, 250, 500, 1000, 2000, 4000]
+    fig, axes = plt.subplots(2, 4, figsize=(16, 8))
+    axes = axes.flatten()
+
+    for i, freq in enumerate(bands):
+        filtered_rir = octave_band_filter(rir, fs, freq)
+        sch_db = schroeder_integration(filtered_rir)
+        t = np.arange(len(sch_db)) / fs
+
+        axes[i].plot(t, sch_db)
+        axes[i].axhline(-5,  color='r', linestyle='--', alpha=0.7, label='-5 dB')
+        axes[i].axhline(-25, color='g', linestyle='--', alpha=0.7, label='-25 dB')
+        
+        # Show what RT60 was calculated
+        rt60 = calculate_rt60(sch_db, fs)
+        dynamic_range = sch_db[0] - np.nanmin(sch_db)
+        
+        axes[i].set_title(f"{freq} Hz | RT60={rt60:.2f}s | DR={dynamic_range:.0f}dB")
+        axes[i].set_xlabel("Time (s)")
+        axes[i].set_ylabel("Level (dB)")
+        axes[i].set_ylim(-65, 5)
+        axes[i].grid(True, alpha=0.3)
+        axes[i].legend(fontsize=7)
+
+    axes[-1].set_visible(False)
+    plt.suptitle("Schroeder Decay Curves - Debug")
+    plt.tight_layout()
+    plt.show()
 
 def plot_room(room, filename=None, show=True):
     fig = plt.figure(figsize=(10, 8))
@@ -404,37 +434,26 @@ def plot_room_2d(room, filename=None, show=True):
         plt.close(fig)
 
 
-def plot_reverberation_time(rir, fs, filename=None, show=True):
-    """
-    Plot RT60 across standard octave bands.
+def plot_reverberation_time(rir_array, fs, freq_bands=None, filename=None, show=True):
+    if freq_bands is None:
+        freq_bands = [63, 125, 250, 500, 1000, 2000, 4000]
 
-    :param rir: Room Impulse Response.
-    :param fs: Sampling frequency.
-    :param filename: Path to save the plot.
-    :param show: Whether to display the plot.
-    """
+    rir_total, rir_bands = sum_frequency_bands(rir_array, fs, freq_bands)
+
     fig, ax = plt.subplots(figsize=(10, 6))
-    bands = get_octave_bands(subdivisions=10)
     rt60s = []
-    for freq in bands:
-        filtered_rir = octave_band_filter(rir, fs, freq)
-        sch_db = schroeder_integration(filtered_rir)
+
+    for i, freq in enumerate(freq_bands):
+        sch_db = schroeder_integration(rir_bands[i])
         rt60 = calculate_rt60(sch_db, fs)
         rt60s.append(rt60)
+        print(f"Band {freq:5d} Hz: RT60={rt60:.3f}s")
 
-    # Filter out NaN values to prevent plotting issues
-    valid_indices = ~np.isnan(rt60s)
-    bands_to_plot = np.array(bands)[valid_indices]
-    rt60s_to_plot = np.array(rt60s)[valid_indices]
-
-    ax.plot(bands_to_plot, rt60s_to_plot, '-', label='T20')
+    valid = ~np.isnan(rt60s)
+    ax.plot(np.array(freq_bands)[valid], np.array(rt60s)[valid], '-o')
     ax.set_xscale('log')
-    base_bands = get_octave_bands(subdivisions=1)
-    ax.set_xticks(base_bands)
-    ax.set_xticklabels([str(b) for b in base_bands])
-    ax.minorticks_on()
-    ax.set_xlim(left=125)
-
+    ax.set_xticks(freq_bands)
+    ax.set_xticklabels([str(b) for b in freq_bands])
     ax.set_xlabel("Frequency (Hz)")
     ax.set_ylabel("Reverberation Time (s)")
     ax.set_title("Reverberation Time (RT60)")
@@ -443,7 +462,6 @@ def plot_reverberation_time(rir, fs, filename=None, show=True):
     plt.tight_layout()
     if filename:
         plt.savefig(filename, dpi=150)
-        print(f"Reverberation time plot saved to {filename}")
     if show:
         plt.show()
     else:
