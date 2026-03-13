@@ -133,41 +133,15 @@ class ImageSourceRenderer:
                         rirs.append(generate_rir(hist, self.fs, rir_duration, not interference))
                     rir = np.stack(rirs, axis=1)
                 else:
-                    rir = generate_rir(rx.amplitude_histogram, self.fs, rir_duration, not interference)
-                    rirs = [rir]
+                    #rir = generate_rir(rx.amplitude_histogram, self.fs, rir_duration, not interference)
+                    #rirs = [rir]
+                    hist = [
+                        (t, np.array(amp, dtype=complex), True)
+                        for t, amp, _, _, _ in rx.amplitude_histogram
+                    ]
+                    rir = generate_rir(hist, self.fs, rir_duration, not interference)
 
                 self.last_rirs[rx.name] = rir
 
-                # Convolve
-                source_audio = self.source_audios[source]
-                gain = self.source_gains.get(source, 1.0)
-
-                if isinstance(rx, AmbisonicReceiver):
-                    processed_channels = [fftconvolve(source_audio * gain, rir_ch, mode='full') for rir_ch in rirs]
-                    max_len = max(len(pc) for pc in processed_channels)
-                    padded_channels = [np.pad(pc, (0, max_len - len(pc))) for pc in processed_channels]
-                    processed = np.stack(padded_channels, axis=1)
-                else:
-                    processed = fftconvolve(source_audio * gain, rirs[0], mode='full')
-
-                # Mix into final buffer
-                if receiver_outputs[rx.name] is None:
-                    receiver_outputs[rx.name] = processed
-                else:
-                    current_len = receiver_outputs[rx.name].shape[0]
-                    new_len = processed.shape[0]
-                    if new_len > current_len:
-                        padding_shape = (new_len - current_len,) + receiver_outputs[rx.name].shape[1:]
-                        receiver_outputs[rx.name] = np.concatenate([receiver_outputs[rx.name], np.zeros(padding_shape)])
-                    elif current_len > new_len:
-                        padding_shape = (current_len - new_len,) + processed.shape[1:]
-                        processed = np.concatenate([processed, np.zeros(padding_shape)])
-                    receiver_outputs[rx.name] += processed
-
-        # Normalize final mix
-        for name, audio in receiver_outputs.items():
-            if audio is not None and np.max(np.abs(audio)) > 0:
-                receiver_outputs[name] /= np.max(np.abs(audio))
-
-        return receiver_outputs, self.last_rirs
+        return self.last_rirs
 
