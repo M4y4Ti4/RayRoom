@@ -3,9 +3,9 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from rayroom.core.utils import sum_frequency_bands
-from rayroom.core.data_anal import plot_transfer_function
 from rayroom import Room, Source, Receiver, Person, RayTracer, get_material, HybridRenderer
-from rayroom.core.data_anal import plot_rir, plot_transfer_function
+from rayroom.core.data_anal import plot_rir, plot_transfer_function, overlay_DG, plot_rir_per_band
+from rayroom.room.visualize import plot_reverberation_time
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -44,7 +44,7 @@ def main():
     fs = 44100
     impulse_length = 128   # 128 samples = ~2.9 ms
     delta_impulse = np.zeros(impulse_length)
-    delta_impulse[0] = 2.0  # first sample is 1
+    delta_impulse[0] = 1.0  # first sample is 1
     tracer.set_source_audio(source, delta_impulse)
 
     print("Starting simulation...")
@@ -53,20 +53,22 @@ def main():
             max_hops=150,
             rir_duration=2.0,
             record_paths=True,
-            interference=False,
-            ism_order=2,         # Enable Hybrid Mode
+            interference=True,
+            ism_order=5,         # Enable Hybrid Mode
             show_path_plot=True, 
             parallel = False)
     rir_array = rirs[receiver1.name]
     rir_total, rir_bands = sum_frequency_bands(rir_array, fs = 44100) #band-pass and sum each frequency band to produce broadband RIR
-
+    print(rir_bands)
     print(f"rir_total max freq content: {np.argmax(np.abs(np.fft.rfft(rir_total)))}")
     print(f"rir_array shape: {rir_array.shape}")
     print(f"rir_total shape: {rir_total.shape}")
 
-    plot_rir(rir_total, fs = 44100) #plot the RIR of all frequencies 
+    np.savez(r"C:\Masters\RayroomProject\rayroom\examples\initial_testing\rir_data.npz", rir_total = rir_total, fs = fs )
+    print("saved")
 
-    plot_transfer_function(rir_total, fs = 44100) #plot the transfer function for all frequencies 
+    plot_rir_per_band(rir_array, rir_bands, fs=44100)
+    plot_reverberation_time(rir_array, fs)
 
 if __name__ == "__main__":
     main()
