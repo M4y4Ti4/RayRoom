@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.signal import butter, sosfilt
 
-def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True, collapse_bands = False):
+def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True, collapse_bands = False, interference = True):
     """Generates a Room Impulse Response (RIR) from a time-energy histogram.
 
     This function converts a list of reflection arrival times and their
@@ -83,8 +83,18 @@ def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True, collapse_
     final_amps = np.zeros((len(raw_amps), n_bands))
     
 
+    # Use complex dtype when interference is enabled
+    if interference:
+        final_amps = np.zeros((len(raw_amps), n_bands), dtype=complex)
+        rir = np.zeros((rir_len, n_bands), dtype=complex)
+    else:
+        final_amps = np.zeros((len(raw_amps), n_bands))
+        rir = np.zeros((rir_len, n_bands))
+
     for i, (amp, ism) in enumerate(zip(raw_amps, is_ism)):
-        if ism:
+        if ism and interference:
+            final_amps[i] = amp  # keep complex
+        elif ism and not interference:
             final_amps[i] = np.real(amp)
         else:
             a = np.sqrt(np.real(amp))
@@ -92,17 +102,14 @@ def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True, collapse_
                 a *= np.random.choice([-1, 1])
             final_amps[i] = a
 
-    rir = np.zeros((rir_len, n_bands))
     indices = (times * fs).astype(int)
     for b in range(n_bands):
         np.add.at(rir[:, b], indices, final_amps[:, b])
-    print("\n--- First 5 histogram entries ---")
-    for i, entry in enumerate(histogram[:5]):
-        t, amp, is_ism_flag = entry if len(entry) == 3 else (*entry, "unknown")
-        print(f"  t={t:.4f}s  is_ism={is_ism_flag}  amp={np.real(amp)[:2]}")
+
+    # Take real part before returning
     if collapse_bands:
-        return rir.sum(axis=1)
-    return rir
+        return np.real(rir).sum(axis=1)
+    return np.real(rir)
 
 def bandpass_filter(signal, low_freq, high_freq, fs, order=4):
     """apply a bandpass filter to the frequency bands in order to sum and produce a broadband signal
