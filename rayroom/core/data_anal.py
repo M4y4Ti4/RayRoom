@@ -23,7 +23,7 @@ def plot_transfer_function(rir_total, fs, ax = None, label = "GA"):
     #ax.set_xticks([63, 125, 250, 500, 1000, 2000, 4000])
     #ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, _: str(int(x))))
     #plt.savefig(r"C:\Masters\RayroomProject\rayroom\examples\initial_testing\Transfer function.png")
-    #plt.show()
+    plt.show()
     return ax
 
 

@@ -192,32 +192,27 @@ class ImageSourceEngine:
             self._recursive_images(new_image, all_images, max_depth)
 
     def _process_receiver(self, real_source, receiver, images):
-        """Processes all image sources for a single receiver.
+        construct_none = 0
+        validate_fail = 0
+        accepted = 0
 
-        :param real_source: The original `Source` object.
-        :type real_source: rayroom.room.objects.Source
-        :param receiver: The `Receiver` to process for.
-        :type receiver: rayroom.room.objects.Receiver
-        :param images: The list of all `ImageSource` objects.
-        :type images: list[ImageSource]
-        """
-        # For each image, check visibility path to receiver
-        print(f"[_process_receiver] called for receiver={receiver.name} with {len(images)} images")
         for img in images:
             result = self._construct_path(img, receiver)
 
             if result is None:
+                construct_none += 1
                 continue
 
             path_points, walls_hit = result
 
-            # Verify validity (intersections within polygons) and Occlusion
-            if self._validate_path(path_points, walls_hit):
-                print(f"[valid path] order={img.order} time={np.sum([np.linalg.norm(path_points[i+1]-path_points[i]) for i in range(len(path_points)-1)])/343:.4f}s walls={[w.name if hasattr(w,'name') else id(w) for w in walls_hit]}")
-                # Calculate energy and time
-                self._record_reflection(
-                    real_source, receiver, img, path_points, walls_hit
-                )
+            if not self._validate_path(path_points, walls_hit):
+                validate_fail += 1
+                continue
+
+            accepted += 1
+            self._record_reflection(real_source, receiver, img, path_points, walls_hit)
+
+        print(f"[ISM] construct_none={construct_none} validate_fail={validate_fail} accepted={accepted}")
 
     def _construct_path(self, image, receiver):
         """Backtracks from a receiver to an image source to find reflection points.
@@ -257,7 +252,7 @@ class ImageSourceEngine:
                 current_target, ray_dir, wall.vertices[0], wall.normal
             )
 
-            if t is None or t < 1e-5 or t > dist_to_img + 1e-5:
+            if t is None or t < 1e-5 or t > dist_to_img * 1.01 + 1e-5:
                 return None
 
             intersection_point = current_target + t * ray_dir
@@ -424,7 +419,7 @@ class ImageSourceEngine:
             mat = wall.material #array, 7
             abs_coeff = mat.absorption
             energy *= (1.0 - abs_coeff) #should be array of 7
-            total_phase += np.where(abs_coeff > 0.5, np.pi, 0.0)
+            #total_phase += np.where(abs_coeff > 0.5, np.pi, 0.0)
         
         amplitude = np.sqrt(energy)
         k = 2 * np.pi * np.array(FREQ_BANDS) / C_SOUND
@@ -446,6 +441,8 @@ class ImageSourceEngine:
 
         if not hasattr(receiver, 'ism_paths'):
             receiver.ism_paths = []
+
+        
         receiver.ism_paths.append({'points': [p.copy() for p in path_points], 
                                    'walls': walls_hit, 
                                    'order': image.order,

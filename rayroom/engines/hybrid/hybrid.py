@@ -288,6 +288,9 @@ class HybridRenderer:
 
                 else:
                     hist = rx_hist_data if rx_hist_data is not None else []
+                    ism_in_hist = sum(1 for entry in hist if entry[2] == True)
+                    ray_in_hist = sum(1 for entry in hist if entry[2] == False)
+                    print(f"[generate_rir input] ISM={ism_in_hist} Ray={ray_in_hist}")
                     rir = generate_rir(hist, self.fs, rir_duration, random_phase=True, interference = True)
 
                 # Store the RIR, last source overwrites.

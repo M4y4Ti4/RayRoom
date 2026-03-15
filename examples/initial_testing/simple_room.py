@@ -6,9 +6,10 @@ from rayroom.core.utils import sum_frequency_bands
 from rayroom import Room, Source, Receiver, Person, RayTracer, get_material, HybridRenderer
 from rayroom.core.data_anal import plot_rir, plot_transfer_function, overlay_DG, plot_rir_per_band
 from rayroom.room.visualize import plot_reverberation_time
+import random
+
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 
 def main():
     # 1. Create Room (Shoebox 5m x 4m x 3m)
@@ -49,7 +50,7 @@ def main():
 
     print("Starting simulation...")
     #tracer.generate_rir_only(source, n_rays=20000, max_hops=30)
-    rirs, all_paths = tracer.render(n_rays=20000,
+    rirs, all_paths = tracer.render(n_rays=2000,
             max_hops=150,
             rir_duration=2.0,
             record_paths=True,
@@ -59,16 +60,37 @@ def main():
             parallel = False)
     rir_array = rirs[receiver1.name]
     rir_total, rir_bands = sum_frequency_bands(rir_array, fs = 44100) #band-pass and sum each frequency band to produce broadband RIR
+    for i, band in enumerate(rir_bands):
+        print(f"Band {[63,125,250,500,1000,2000,4000][i]}Hz: max={np.max(np.abs(band)):.6e}")
     print(rir_bands)
     print(f"rir_total max freq content: {np.argmax(np.abs(np.fft.rfft(rir_total)))}")
     print(f"rir_array shape: {rir_array.shape}")
     print(f"rir_total shape: {rir_total.shape}")
+    # After simulation, count ISM vs ray contributions
+    hist = receiver1.amplitude_histogram
+    ism_count = sum(1 for entry in hist if entry[2] == True)  
+    ray_count = sum(1 for entry in hist if entry[2] == False)
+    print(f"ISM reflections: {ism_count}")
+    print(f"Ray reflections: {ray_count}")
 
+    # Also check energy balance
+    ism_energy = sum(np.sum(np.abs(entry[1])**2) for entry in hist if entry[2] == True)
+    ray_energy = sum(np.sum(np.abs(entry[1])**2) for entry in hist if entry[2] == False)
+    print(f"ISM energy: {ism_energy:.6f}")
+    print(f"Ray energy: {ray_energy:.6f}")
+    print(f"Ray/ISM energy ratio: {ray_energy/ism_energy:.1f}x")
     np.savez(r"C:\Masters\RayroomProject\rayroom\examples\initial_testing\rir_data.npz", rir_total = rir_total, fs = fs )
     print("saved")
 
     plot_rir_per_band(rir_array, rir_bands, fs=44100)
     plot_reverberation_time(rir_array, fs)
+    raw_band = rir_array[:, 3]
+    H = np.fft.rfft(raw_band)
+    freqs = np.fft.rfftfreq(len(raw_band), 1/fs)
+    mag = 20 * np.log10(np.abs(H) + 1e-12)
+    plt.plot(freqs, mag)
+    plt.xlim(0, 4000)
+    plt.show()
 
 if __name__ == "__main__":
     main()
