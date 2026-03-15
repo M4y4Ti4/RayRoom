@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 import matplotlib
 import scipy 
 
-def plot_transfer_function(rir_total, fs):
 def plot_transfer_function(rir_total, fs, ax = None, label = "GA"):
     if ax is None: 
         fig, ax = plt.subplots(figsize=(12, 5))
@@ -21,7 +20,8 @@ def plot_transfer_function(rir_total, fs, ax = None, label = "GA"):
     ax.set_xlabel("Frequency (Hz)")
     ax.set_ylabel("Magnitude (dB)")
     ax.set_title("Transfer Function")
-@@ -21,8 +22,9 @@ def plot_transfer_function(rir_total, fs):
+    ax.set_xlim([0, 4000])
+    ax.set_ylim([-60, 10])
     ax.grid(True, which='both', alpha=0.3)
     #ax.set_xticks([63, 125, 250, 500, 1000, 2000, 4000])
     #ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, _: str(int(x))))
@@ -31,11 +31,6 @@ def plot_transfer_function(rir_total, fs, ax = None, label = "GA"):
     #plt.show()
     return ax
 
-
-def plot_rir(rir_total, fs):
-@@ -36,3 +38,60 @@ def plot_rir(rir_total, fs):
-    plt.savefig(r"C:\Masters\RayroomProject\rayroom\examples\initial_testing\RIR.png")
-    plt.show()
 
 
 def overlay_DG(rir_total, fs):
@@ -74,7 +69,18 @@ def overlay_DG(rir_total, fs):
     ax.grid(True, which='both', alpha=0.3)
     ax.legend()
     plt.show()
-    
+
+def plot_rir(rir_total, fs):
+    t = np.linspace(0, 2.0, len(rir_total))
+    fig, ax = plt.subplots(figsize=(12,5))
+    ax.plot(t, rir_total)
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Amplitude")
+    ax.set_title("Impulse Response")
+    ax.grid(True, which='both', alpha=0.3)
+    plt.savefig(r"C:\Masters\RayroomProject\rayroom\examples\initial_testing\RIR.png")
+    plt.show()
+
 def plot_rir_per_band(rir_array, rir_bands, fs, freq_bands=None):
     if freq_bands is None:
         freq_bands = [63, 125, 250, 500, 1000, 2000, 4000]
