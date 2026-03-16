@@ -129,28 +129,26 @@ def bandpass_filter(signal, low_freq, high_freq, fs, order=4):
     return sosfilt(sos, signal)
 
 def sum_frequency_bands(rir_array, fs, freq_bands=None):
-    """ Sum frequency band RIRs with band pass filtering
-    
-    param rir_array: RIR array, shape (n_samples, n_bands)
-    param fs: sampling frequency in Hz
-    param freq_bands: list of octave band centre frequencies 
-    return: summed RIR of shape(n_samples)
-    """
-    if freq_bands is None: 
+    if freq_bands is None:
         freq_bands = [63, 125, 250, 500, 1000, 2000, 4000]
     
     n_samples, n_bands = rir_array.shape
     rir_summed = np.zeros(n_samples)
     filtered = []
 
+    # Non-overlapping edges at geometric means between bands
+    edges = [0, 88, 177, 354, 707, 1414, 2828, fs/2]
+    #         ↑   ↑    ↑    ↑    ↑     ↑     ↑    ↑
+    #        DC  63  125  250  500  1000  2000  4000  Nyquist
+
     for b in range(n_bands):
-        low = freq_bands[b] / np.sqrt(2)
-        high = freq_bands[b] * np.sqrt(2)
+        low  = max(edges[b], 20.0)
+        high = min(edges[b+1], fs/2 * 0.95)
         filtered_band = bandpass_filter(rir_array[:, b], low, high, fs)
         filtered.append(filtered_band)
         rir_summed += filtered_band
     
-    return rir_summed, filtered 
+    return rir_summed, filtered
 
 
 
