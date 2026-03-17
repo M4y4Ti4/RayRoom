@@ -45,7 +45,19 @@ def _run_hybrid_task(ism_engine, tracer, source, ism_order, n_rays, max_hops, re
         receiver_histograms[rx_name] = (
             ism_histograms[rx_name] + ray_histograms.get(rx_name, [])
         )
+    ism_entries = ism_histograms[rx_name]
+    ray_entries = ray_histograms.get(rx_name, [])
 
+    ism_direct = [(t, amp) for t, amp, _ in ism_histograms[rx_name] if t < 0.01]
+    ray_direct = [(t, amp) for t, amp, _ in ray_histograms[rx_name] if t < 0.01]
+
+    print(f"ISM direct sound entries: {len(ism_direct)}")
+    for t, amp in ism_direct:
+        print(f"  t={t:.4f} amp={np.mean(np.abs(amp)):.6e}")
+
+    print(f"Ray direct sound entries: {len(ray_direct)}")
+    for t, amp in ray_direct:
+        print(f"  t={t:.4f} amp={np.mean(np.abs(amp)):.6e}")
     return source.name, receiver_histograms, paths
 
 
