@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 import scipy 
+from ..core.utils import smooth_tf
 
 def plot_transfer_function(rir_total, fs, ax = None, label = "GA"):
     if ax is None: 
@@ -13,15 +14,16 @@ def plot_transfer_function(rir_total, fs, ax = None, label = "GA"):
     freqs = np.fft.rfftfreq(n, d=1/fs)
 
     magnitude_db = 20 * np.log10(np.abs(H) + 1e-12)
+    smoothed = smooth_tf(freqs, magnitude_db, fraction=12)
 
     fig, ax = plt.subplots(figsize=(12, 5))
     ax.plot(freqs, magnitude_db)
-    ax.plot(freqs, magnitude_db, label=label)
+    ax.plot(freqs, smoothed, color = 'orange', label='1/3 octave smoothed')
     ax.set_xlabel("Frequency (Hz)")
     ax.set_ylabel("Magnitude (dB)")
     ax.set_title("Transfer Function")
     ax.set_xlim([0, 4000])
-    ax.set_ylim([-60, 10])
+    ax.set_ylim([-80, 20])
     ax.grid(True, which='both', alpha=0.3)
     #ax.set_xticks([63, 125, 250, 500, 1000, 2000, 4000])
     #ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, _: str(int(x))))
