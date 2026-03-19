@@ -2,7 +2,7 @@ import numpy as np
 from tqdm import tqdm
 
 from ...core.physics import air_absorption_coefficient
-from ...core.constants import C_SOUND, N_BANDS
+from ...core.constants import C_SOUND, N_BANDS, FREQ_BANDS
 from ...core.geometry import (
     ray_plane_intersection,
     ray_box_intersection,
@@ -37,8 +37,9 @@ class RayTracer:
         # Precompute air absorption for a reference frequency (e.g. 1kHz)
         # Real simulation should handle bands.
         # For simple energy ray tracing, we approximate broadband decay.
-        self.air_absorption_db_m = air_absorption_coefficient(1000.0, temperature, humidity)
-
+        self.air_absorption_db_m = np.array([air_absorption_coefficient(
+                    f, temperature, humidity
+                ) for f in FREQ_BANDS])
     def run(self, source, n_rays=10000, max_hops=50, energy_threshold=1e-6, record_paths=False, min_ism_order=-1):
         
         print(f"[RayTracer.run] min_ism_order={min_ism_order}")  # add this
@@ -94,7 +95,7 @@ class RayTracer:
         directions = np.stack((x, y, z), axis=1)
 
         # Base energy per ray (uniform distribution)
-        base_energy = source.power / n_rays
+        base_energy = np.full(N_BANDS, source.power / n_rays)
         # Assuming scalar power for now. If array, handle accordingly.
 
         # Directivity Factors
@@ -122,9 +123,9 @@ class RayTracer:
                 gain = np.ones(n_rays)
 
             scaling_factor = n_rays / (np.sum(gain) + 1e-9)
-            initial_energies = base_energy * gain * scaling_factor
+            initial_energies = base_energy[np.newaxis, :] * gain[:, np.newaxis] * scaling_factor
         else:
-            initial_energies = np.full(n_rays, base_energy)
+            initial_energies = np.tile(base_energy, (n_rays, 1))
 
         collected_paths = []
         receiver_hits = [] # List to store hits returned by single ray trace
@@ -164,20 +165,24 @@ class RayTracer:
         """
         Trace a single ray.
         """
+        if not hasattr(self, '_ray_debug'):
+            self._ray_debug = 0
 
+        if self._ray_debug < 3:
+            print(f"\n[RAY DEBUG] Initial energy per band: {current_energy}")
         ray_path = []
         current_time = 0.0
         total_dist = 0.0
         is_pure_specular = True
 
-        if current_energy < energy_threshold or not np.isfinite(current_energy):
+        if np.mean(current_energy) < energy_threshold or not np.all(np.isfinite(current_energy)):
             if not np.isfinite(current_energy):
                 print(f"DEBUG: Invalid energy detected: {current_energy}. Stopping ray.")
             return None, []
 
         hit_results = []
         for hop in range(max_hops):
-            if np.sum(current_energy) < energy_threshold:
+            if np.mean(current_energy) < energy_threshold:
                 break
 
             # 1. Find nearest wall/furniture intersection
@@ -251,8 +256,8 @@ class RayTracer:
                         # and the reflection order (hop) is covered by ISM (<= min_ism_order),
                         # then SKIP recording.
                         should_record = True
-                        #if is_pure_specular and hop <= min_ism_order: use if you want non-specular early reflections
-                        if hop <= min_ism_order:
+                        if is_pure_specular and hop <= min_ism_order: #use if you want non-specular early reflections
+                        #if hop <= min_ism_order:
                             should_record = False
                             #print(f"[skip] hop={hop} min_ism_order={min_ism_order} is_pure_specular={is_pure_specular}")
                         #else: 
@@ -269,7 +274,7 @@ class RayTracer:
                             # For the parallel refactor, we will make this function return hits.
                             
                             # Storing hit info: (receiver_name, time, energy, direction)
-                            energy_array = np.full(N_BANDS, current_energy)
+                            energy_array = current_energy.copy()
                             az = float(np.random.uniform(0, 360))
                             el = float(np.random.choice([-30, -15, 0, 15, 30]))
 
@@ -321,19 +326,20 @@ class RayTracer:
             mat = hit_obj.material
 
             # Material properties (handle scalar or array)
-            abs_coeff = np.mean(mat.absorption) 
+            abs_coeff_bands = mat.absorption
+            abs_coeff_mean = float(np.mean(abs_coeff_bands))
             trans_coeff = np.mean(mat.transmission) if hasattr(mat.transmission, "__len__") else mat.transmission
             scat_coeff = np.mean(mat.scattering) if hasattr(mat.scattering, "__len__") else mat.scattering
 
             # Energy loss due to absorption
-            current_energy *= (1.0 - abs_coeff)
+            current_energy *= (1.0 - abs_coeff_bands)
             # Determine fate: Transmit or Reflect?
             # Probability of transmission given we didn't absorb: T / (1 - A)
 
-            if abs_coeff >= 1.0 - 1e-6:
+            if abs_coeff_mean >= 1.0 - 1e-6:
                 break  # Fully absorbed
 
-            prob_transmission = trans_coeff / (1.0 - abs_coeff)
+            prob_transmission = trans_coeff / (1.0 - abs_coeff_mean)
 
             if np.random.random() < prob_transmission:
                 # Transmit
@@ -350,5 +356,11 @@ class RayTracer:
                     ray_dir = reflect_vector(ray_dir, hit_normal)
 
                 ray_origin = hit_point + hit_normal * 1e-3
-
+            if self._ray_debug < 3 and hop < 3:
+                print(f"  hop={hop} wall={hit_obj.material.name} "
+                    f"abs_coeff={abs_coeff_bands} "
+                    f"energy_after={current_energy}")
+                    
+        if self._ray_debug < 3:
+            self._ray_debug += 1
         return (ray_path if record_paths and ray_path else None), hit_results
