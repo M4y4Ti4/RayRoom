@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.signal import butter, sosfilt
+from ..core.auralisation import get_hrir, load_hrtf
 
 def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True, collapse_bands = False, interference = True):
     """Generates a Room Impulse Response (RIR) from a time-energy histogram.
@@ -61,7 +62,13 @@ def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True, collapse_
     # Sort by time
     histogram.sort(key=lambda x: x[0])
 
-    if len(histogram[0]) == 3: 
+    if len(histogram[0]) == 5:
+        times = np.array([t for t, _, _, _, _ in histogram])
+        raw_amps = np.array([a for _, a, _, _, _ in histogram])
+        is_ism = np.array([f for _, _, f, _, _ in histogram])
+        azimuths = np.array([az for _, _, _, az, _ in histogram])
+        elevations = np.array([el for _, _, _, _, el in histogram])
+    elif len(histogram[0]) == 3: 
         times = np.array([t for t, _, _ in histogram])
         raw_amps = [a for _, a, _ in histogram]
         is_ism = np.array([flag for _, _, flag in histogram])
@@ -75,6 +82,8 @@ def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True, collapse_
     times = times[valid]
     raw_amps = [raw_amps[i] for i in range(len(raw_amps)) if valid[i]]
     is_ism = is_ism[valid]
+    azimuths = azimuths[valid]
+    elevations = elevations[valid]
 
     if len(times) == 0:
         return np.zeros((rir_len, len(raw_amps[0]) if raw_amps else 0))
@@ -109,7 +118,82 @@ def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True, collapse_
     # Take real part before returning
     if collapse_bands:
         return np.real(rir).sum(axis=1)
-    return np.real(rir)
+    return np.real(rir), azimuths, elevations, indices
+
+def generate_brir(histogram, fs = 44100, random_phase = True, interference = True, duration = 2.0):
+
+    import sofar
+    print(f"[generate_brir] histogram length: {len(histogram)}")
+    if len(histogram) > 0:
+        print(f"[generate_brir] first entry length: {len(histogram[0])}")
+    else:
+        print("[generate_brir] histogram is EMPTY — returning zeros")
+        return np.zeros(int(fs*duration)), np.zeros(int(fs*duration))
+
+    hrtf_path = r"C:\Masters\HRTF\KEMAR_GRAS_EarSim_LargeEars_FreeFieldComp_44kHz.sofa"
+
+    hrtf = load_hrtf(hrtf_path, fs_target=44100)
+
+    rir_len = int(fs * duration)
+    brir_left = np.zeros(rir_len)
+    brir_right = np.zeros(rir_len)
+
+    if len(histogram[0]) == 5:
+        times = np.array([t for t, _, _, _, _ in histogram])
+        raw_amps = np.array([a for _, a, _, _, _ in histogram])
+        is_ism = np.array([f for _, _, f, _, _ in histogram])
+        azimuths = np.array([az for _, _, _, az, _ in histogram])
+        elevations = np.array([el for _, _, _, _, el in histogram])
+    elif len(histogram[0]) == 3: 
+        times = np.array([t for t, _, _ in histogram])
+        raw_amps = [a for _, a, _ in histogram]
+        is_ism = np.array([flag for _, _, flag in histogram])
+    else: 
+        times = np.array([t for t, _ in histogram])
+        raw_amps = np.array([a for t, a in histogram])
+        is_ism = np.zeros(len(raw_amps), dtype = bool)
+
+        # Discard late reflections
+    valid = times < duration
+    times = times[valid]
+    raw_amps = [raw_amps[i] for i in range(len(raw_amps)) if valid[i]]
+    is_ism = is_ism[valid]
+    azimuths = azimuths[valid]
+    elevations = elevations[valid]
+
+    if len(times) == 0:
+        return np.zeros((rir_len, len(raw_amps[0]) if raw_amps else 0))
+    
+    n_bands = len(raw_amps[0])
+    final_amps = np.zeros((len(raw_amps), n_bands))
+    
+    for i, (amp, ism, az, el, t) in enumerate(zip(raw_amps, is_ism, 
+                                                    azimuths, elevations, times)):
+        # Use complex dtype when interference is enabled
+        if ism and interference:
+            amp_scalar = float(np.mean(np.abs(amp)))
+        elif ism and not interference:
+            amp_scalar = float(np.mean(np.real(amp)))
+        else: 
+            amp_scalar = float(np.mean(np.sqrt(np.real(amp))))
+            if random_phase: 
+                amp_scalar *= np.random.choice([-1, 1])
+
+        hrir = get_hrir(hrtf, az_target=az, el_target=el)
+        
+        hrir_left = hrir[0]
+        hrir_right = hrir[1]
+
+        sample_idx = int(t * fs)
+        if sample_idx >= rir_len:
+            continue
+
+        end = min(sample_idx + len(hrir_left), rir_len)
+        n   = end - sample_idx
+        brir_left[sample_idx:end]  += amp_scalar * hrir_left[:n]
+        brir_right[sample_idx:end] += amp_scalar * hrir_right[:n]
+
+    return brir_left, brir_right
 
 def bandpass_filter(signal, low_freq, high_freq, fs, order=4):
     """apply a bandpass filter to the frequency bands in order to sum and produce a broadband signal
