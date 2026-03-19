@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from rayroom.core.utils import sum_frequency_bands
 from rayroom import Room, Source, Receiver, Person, RayTracer, get_material, HybridRenderer
-from rayroom.core.data_anal import plot_rir, plot_transfer_function, overlay_DG, plot_rir_per_band
+from rayroom.core.data_anal import plot_rir, plot_transfer_function, overlay_DG, plot_rir_per_band, plot_rir_components
 from rayroom.room.visualize import plot_reverberation_time
 import random
 
@@ -17,21 +17,20 @@ def main():
     mats = {
         "floor": get_material("carpet"),
         "ceiling": get_material("drywall"),
-        "front": get_material("brick"),
-        "back": get_material("brick"),
-        "left": get_material("brick"),
-        "right": get_material("brick")
+        "front": get_material("drywall"),
+        "back": get_material("drywall"),
+        "left": get_material("drywall"),
+        "right": get_material("drywall")
     }
 
     room = Room.create_shoebox([5, 4, 3], materials=mats)
-
     # 2. Add Objects
     # Source at (1, 1, 1.5)
     source    = Source("Speaker", [3.04, 2.59, 1.62], power=1.0)
     room.add_source(source)
 
     # Receiver (Microphone) at (4, 3, 1.5)
-    receiver1 = Receiver("persona", [4.26, 1.76, 1.62], radius=0.2)
+    receiver1 = Receiver("persona", [4.26, 2.59, 1.62], radius=0.09)
     room.add_receiver(receiver1)
 
     # Plot Room BEFORE Simulation (Check geometry)
@@ -50,7 +49,7 @@ def main():
 
     print("Starting simulation...")
     #tracer.generate_rir_only(source, n_rays=20000, max_hops=30)
-    rirs, all_paths = tracer.render(n_rays=2000,
+    rirs, all_paths, brir  = tracer.render(n_rays=20000,
             max_hops=150,
             rir_duration=2.0,
             record_paths=True,
@@ -60,26 +59,23 @@ def main():
             parallel = False)
     rir_array = rirs[receiver1.name]
     rir_total, rir_bands = sum_frequency_bands(rir_array, fs = 44100) #band-pass and sum each frequency band to produce broadband RIR
-    for i, band in enumerate(rir_bands):
-        print(f"Band {[63,125,250,500,1000,2000,4000][i]}Hz: max={np.max(np.abs(band)):.6e}")
-    print(rir_bands)
-    print(f"rir_total max freq content: {np.argmax(np.abs(np.fft.rfft(rir_total)))}")
-    print(f"rir_array shape: {rir_array.shape}")
-    print(f"rir_total shape: {rir_total.shape}")
-    # After simulation, count ISM vs ray contributions
-    hist = receiver1.amplitude_histogram
-    ism_count = sum(1 for entry in hist if entry[2] == True)  
-    ray_count = sum(1 for entry in hist if entry[2] == False)
-    print(f"ISM reflections: {ism_count}")
-    print(f"Ray reflections: {ray_count}")
+    brir_left, brir_right = brir[receiver1.name]
 
-    # Also check energy balance
-    ism_energy = sum(np.sum(np.abs(entry[1])**2) for entry in hist if entry[2] == True)
-    ray_energy = sum(np.sum(np.abs(entry[1])**2) for entry in hist if entry[2] == False)
-    print(f"ISM energy: {ism_energy:.6f}")
-    print(f"Ray energy: {ray_energy:.6f}")
-    print(f"Ray/ISM energy ratio: {ray_energy/ism_energy:.1f}x")
-    np.savez(r"C:\Masters\RayroomProject\rayroom\examples\initial_testing\rir_data.npz", rir_total = rir_total, fs = fs )
+    directions = tracer.last_directions.get(receiver1.name, [])
+    times_dir = np.array([d[0] for d in directions])
+    azimuths = np.array([d[1] for d in directions])
+    elevations = np.array([d[2] for d in directions])
+
+    hist = tracer.last_histogram[receiver1.name]
+    rir_ism, rir_ray, rir_hybrid = plot_rir_components(hist, fs = fs)
+
+    np.savez(r"C:\Masters\RayroomProject\rayroom\examples\initial_testing\rir_data.npz", 
+             rir_total = rir_total, 
+             fs = fs,
+             az = azimuths, 
+             el = elevations, 
+             brir_left = brir_left,
+             brir_right = brir_right)
     print("saved")
 
     plot_rir_per_band(rir_array, rir_bands, fs=44100)
@@ -90,6 +86,37 @@ def main():
     mag = 20 * np.log10(np.abs(H) + 1e-12)
     plt.plot(freqs, mag)
     plt.xlim(0, 4000)
+    plt.show()
+
+    fig, axes = plt.subplots(4, 2, figsize=(14, 16))
+    axes = axes.flatten()
+    freq_bands = [63, 125, 250, 500, 1000, 2000, 4000]
+
+    for i, freq in enumerate(freq_bands):
+        # Raw band
+        raw = rir_array[:, i]
+        H_raw = np.fft.rfft(raw)
+        freqs = np.fft.rfftfreq(len(raw), 1/fs)
+        axes[i].plot(freqs, 20*np.log10(np.abs(H_raw)+1e-12), alpha=0.7, label='raw')
+        
+        # Filtered band
+        filt = rir_bands[i]
+        H_filt = np.fft.rfft(filt)
+        axes[i].plot(freqs, 20*np.log10(np.abs(H_filt)+1e-12), alpha=0.7, label='filtered')
+        
+        axes[i].set_title(f"{freq} Hz band")
+        axes[i].set_xlim(0, 4000)
+        axes[i].set_ylim(-60, 10)
+        axes[i].grid(True, alpha=0.3)
+        axes[i].legend(fontsize=8)
+        axes[i].set_xlabel("Frequency (Hz)")
+        axes[i].set_ylabel("Magnitude (dB)")
+
+            # Hide the last empty subplot (7 bands, 8 subplots)
+    axes[-1].set_visible(False)
+
+    plt.suptitle("Transfer Function per Frequency Band (Raw vs Filtered)")
+    plt.tight_layout()
     plt.show()
 
 if __name__ == "__main__":
