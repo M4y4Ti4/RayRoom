@@ -6,8 +6,9 @@ from scipy.signal import fftconvolve
 
 from ..ism import ImageSourceEngine
 from ..raytracer.core import RayTracer
-from ...core.utils import generate_rir
+from ...core.utils import generate_rir, generate_brir
 from ...room.objects import AmbisonicReceiver
+from ...core.auralisation import load_hrtf
 
 
 def _run_hybrid_task(ism_engine, tracer, source, ism_order, n_rays, max_hops, record_paths, verbose=True):
@@ -21,8 +22,8 @@ def _run_hybrid_task(ism_engine, tracer, source, ism_order, n_rays, max_hops, re
     ism_histograms = {}
     for rx in ism_engine.room.receivers:
         ism_histograms[rx.name] = [
-            (t, np.array(amp, dtype=complex), True) 
-            for t, amp, _, _, _, in rx.amplitude_histogram
+            (t, np.array(amp, dtype=complex), True, az, el) 
+            for t, amp, _, az, el, in rx.amplitude_histogram
         ]
         print(f"[ISM collected] {rx.name}: {len(ism_histograms[rx.name])} entries")
     # 3. Clear and run ray tracer on the same (shared) receivers
@@ -35,8 +36,8 @@ def _run_hybrid_task(ism_engine, tracer, source, ism_order, n_rays, max_hops, re
     ray_histograms = {}
     for rx in tracer.room.receivers:
         ray_histograms[rx.name] = [
-            (t, np.array(amp, dtype=float), False) 
-            for t, amp, _, _, _, in rx.amplitude_histogram
+            (t, np.array(amp, dtype=float), False, az, el) 
+            for t, amp, _, az, el, in rx.amplitude_histogram
         ]
 
     # 5. Merge ISM + ray tracer
@@ -48,16 +49,16 @@ def _run_hybrid_task(ism_engine, tracer, source, ism_order, n_rays, max_hops, re
     ism_entries = ism_histograms[rx_name]
     ray_entries = ray_histograms.get(rx_name, [])
 
-    ism_direct = [(t, amp) for t, amp, _ in ism_histograms[rx_name] if t < 0.01]
-    ray_direct = [(t, amp) for t, amp, _ in ray_histograms[rx_name] if t < 0.01]
+    #ism_direct = [(t, amp) for t, amp, _ in ism_histograms[rx_name] if t < 0.01]
+    #ray_direct = [(t, amp) for t, amp, _ in ray_histograms[rx_name] if t < 0.01]
 
-    print(f"ISM direct sound entries: {len(ism_direct)}")
-    for t, amp in ism_direct:
-        print(f"  t={t:.4f} amp={np.mean(np.abs(amp)):.6e}")
+    #print(f"ISM direct sound entries: {len(ism_direct)}")
+    #for t, amp in ism_direct:
+     #   print(f"  t={t:.4f} amp={np.mean(np.abs(amp)):.6e}")
 
-    print(f"Ray direct sound entries: {len(ray_direct)}")
-    for t, amp in ray_direct:
-        print(f"  t={t:.4f} amp={np.mean(np.abs(amp)):.6e}")
+    #print(f"Ray direct sound entries: {len(ray_direct)}")
+    #for t, amp in ray_direct:
+     #   print(f"  t={t:.4f} amp={np.mean(np.abs(amp)):.6e}")
     return source.name, receiver_histograms, paths
 
 
@@ -229,7 +230,9 @@ class HybridRenderer:
         all_paths = {} if record_paths else None
         self.last_rirs = {}
         valid_sources = [s for s in self.room.sources if s in self.source_audios]
-
+        self.last_directions = {}
+        self.last_histogram = {}
+        brir_outputs = {}
         if not valid_sources:
             print("No sources with assigned audio found.")
             if record_paths:
@@ -303,13 +306,23 @@ class HybridRenderer:
                     ism_in_hist = sum(1 for entry in hist if entry[2] == True)
                     ray_in_hist = sum(1 for entry in hist if entry[2] == False)
                     print(f"[generate_rir input] ISM={ism_in_hist} Ray={ray_in_hist}")
-                    rir = generate_rir(hist, self.fs, rir_duration, random_phase=True, interference = True)
+                    
+                    #store merged histogram
+                    self.last_histogram[rx.name] = hist
+
+                    rir, azimuths, elevations, sample_indices = generate_rir(hist, self.fs, rir_duration, random_phase=True, interference = True)
+                    hrtf_path = r"C:\Masters\HRTF\KEMAR_GRAS_EarSim_LargeEars_FreeFieldComp_44kHz.sofa"
+                    hrtf = load_hrtf(hrtf_path, fs_target=44100)
+                    brir_left, brir_right = generate_brir(hist, fs=44100, random_phase = True, interference = True)
+                    self.last_directions[rx.name] = list(zip(sample_indices / self.fs, azimuths, elevations))
+
 
                 # Store the RIR, last source overwrites.
                 self.last_rirs[rx.name] = rir
                 rir_outputs[rx.name] = rir
+                brir_outputs[rx.name] = (brir_left, brir_right)
                
 
         if record_paths:
-            return rir_outputs, all_paths
-        return rir_outputs
+            return rir_outputs, all_paths, brir_outputs
+        return rir_outputs, brir_outputs
