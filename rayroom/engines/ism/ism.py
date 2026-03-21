@@ -436,11 +436,11 @@ class ImageSourceEngine:
         # Record
         if isinstance(receiver, AmbisonicReceiver):
             # Direction from last bounce (or source) to receiver
-            arrival_dir = normalize(path_points[0] - path_points[1])
+            arrival_dir = normalize(path_points[1] - path_points[0])
             receiver.record(time, complex_amplitude, arrival_dir)
         elif isinstance(receiver, Receiver):
-            arrival_dir = normalize(path_points[0] - path_points[1])
-            az = np.degrees(np.arctan2(arrival_dir[0], arrival_dir[1]))
+            arrival_dir = normalize(path_points[1] - path_points[0])
+            az = np.degrees(np.arctan2(arrival_dir[1], arrival_dir[0])) % 360
             el = np.degrees(np.arctan2(arrival_dir[2], np.sqrt(arrival_dir[0]**2 + arrival_dir[1]**2)))
             receiver.record(time, complex_amplitude, is_ism=True, az=az, el=el)
 
