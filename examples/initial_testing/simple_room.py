@@ -7,6 +7,7 @@ from rayroom import Room, Source, Receiver, Person, RayTracer, get_material, Hyb
 from rayroom.core.data_anal import plot_rir, plot_transfer_function, overlay_DG, plot_rir_per_band, plot_rir_components
 from rayroom.room.visualize import plot_reverberation_time
 import random
+from rayroom.core.auralisation import load_hrtf, render_brir, plot_brir
 
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -30,7 +31,7 @@ def main():
     room.add_source(source)
 
     # Receiver (Microphone) at (4, 3, 1.5)
-    receiver1 = Receiver("persona", [4.26, 1.76, 1.62], radius=0.09)
+    receiver1 = Receiver("persona", [4.26, 2.59, 1.62], radius=0.09)
     room.add_receiver(receiver1)
 
     # Plot Room BEFORE Simulation (Check geometry)
@@ -49,7 +50,7 @@ def main():
 
     print("Starting simulation...")
     #tracer.generate_rir_only(source, n_rays=20000, max_hops=30)
-    rirs, all_paths  = tracer.render(n_rays=2000,
+    rirs, all_paths  = tracer.render(n_rays=200000,
             max_hops=150,
             rir_duration=2.0,
             record_paths=True,
@@ -61,15 +62,29 @@ def main():
     rir_total, rir_bands = sum_frequency_bands(rir_array, fs = 44100) #band-pass and sum each frequency band to produce broadband RIR
 
     hist = tracer.last_histogram[receiver1.name]
-    #rir_ism, rir_ray, rir_hybrid = plot_rir_components(hist, fs = fs)
+
+    rir_ism, rir_ray, rir_hybrid = plot_rir_components(hist, fs = fs)
+    hrtf_path = hrtf = r"C:\Masters\HRTF\KEMAR_GRAS_EarSim_LargeEars_FreeFieldComp_44kHz.sofa"
+    hrtf = load_hrtf(hrtf_path, fs_target=44100)
+    brir_l, brir_r, brir_bands_l, brir_bands_r = render_brir(
+    histogram=hist,
+    src_xyz=[3.04, 2.59, 1.62],
+    rec_xyz=[4.26, 1.76, 1.62],
+    hrtf=hrtf,
+    fs=fs,
+    duration=2.0,
+    interference=True)
+
+    plot_brir(brir_l, brir_r, brir_bands_l, brir_bands_r, fs = 44100)
 
     np.savez(r"C:\Masters\RayroomProject\rayroom\examples\initial_testing\rir_data.npz", 
              rir_total = rir_total, 
              rir_array = rir_array,
-             fs = fs)
+             fs = fs,
+             brir_l = brir_l,
+             brir_r = brir_r)
     print("saved")
 
-    
 
 if __name__ == "__main__":
     main()
