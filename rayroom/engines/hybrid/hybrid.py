@@ -6,9 +6,8 @@ from scipy.signal import fftconvolve
 
 from ..ism import ImageSourceEngine
 from ..raytracer.core import RayTracer
-from ...core.utils import generate_rir, generate_brir
+from ...core.utils import generate_rir
 from ...room.objects import AmbisonicReceiver
-from ...core.auralisation import load_hrtf
 
 
 def _run_hybrid_task(ism_engine, tracer, source, ism_order, n_rays, max_hops, record_paths, verbose=True):
@@ -232,7 +231,6 @@ class HybridRenderer:
         valid_sources = [s for s in self.room.sources if s in self.source_audios]
         self.last_directions = {}
         self.last_histogram = {}
-        brir_outputs = {}
         if not valid_sources:
             print("No sources with assigned audio found.")
             if record_paths:
@@ -310,19 +308,14 @@ class HybridRenderer:
                     #store merged histogram
                     self.last_histogram[rx.name] = hist
 
-                    rir, azimuths, elevations, sample_indices = generate_rir(hist, self.fs, rir_duration, random_phase=True, interference = True)
-                    hrtf_path = r"C:\Masters\HRTF\KEMAR_GRAS_EarSim_LargeEars_FreeFieldComp_44kHz.sofa"
-                    hrtf = load_hrtf(hrtf_path, fs_target=44100)
-                    brir_left, brir_right = generate_brir(hist, fs=44100, random_phase = True, interference = True)
-                    self.last_directions[rx.name] = list(zip(sample_indices / self.fs, azimuths, elevations))
+                    rir = generate_rir(hist, self.fs, rir_duration, random_phase=True, interference = True)
 
 
                 # Store the RIR, last source overwrites.
                 self.last_rirs[rx.name] = rir
                 rir_outputs[rx.name] = rir
-                brir_outputs[rx.name] = (brir_left, brir_right)
                
 
         if record_paths:
-            return rir_outputs, all_paths, brir_outputs
-        return rir_outputs, brir_outputs
+            return rir_outputs, all_paths
+        return rir_outputs
