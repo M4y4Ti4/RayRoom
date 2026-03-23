@@ -38,6 +38,7 @@ def render_brir(histogram, src_xyz, rec_xyz, hrtf, fs=44100, duration=2.0,
     hrir_len  = hrtf.Data_IR.shape[-1]
     brir_len  = n_samples + hrir_len
 
+
     # Per-band binaural RIRs — complex to preserve interference
     brir_bands_l = np.zeros((brir_len, n_bands), dtype=complex)
     brir_bands_r = np.zeros((brir_len, n_bands), dtype=complex)
@@ -54,7 +55,12 @@ def render_brir(histogram, src_xyz, rec_xyz, hrtf, fs=44100, duration=2.0,
         hrir   = get_hrir(hrtf, az_target=float(az), el_target=float(el))
         hrir_l = hrir[0].astype(complex)  # shape (hrir_len,)
         hrir_r = hrir[1].astype(complex)
-
+        delay_left = np.where(np.abs(hrir_l) > 0.01*np.max(np.abs(hrir_l)))[0][0]
+        delay_right = np.where(np.abs(hrir_r) > 0.01*np.max(np.abs(hrir_r)))[0][0]
+        onset_delay = min(delay_left, delay_right)
+        hrir_l = hrir_l[onset_delay:]
+        hrir_r = hrir_r[onset_delay:]
+        hrir_len = len(hrir_l)
         # Per-band amplitude
         amp_array = np.array(amp)  # shape (n_bands,)
 
@@ -79,22 +85,11 @@ def render_brir(histogram, src_xyz, rec_xyz, hrtf, fs=44100, duration=2.0,
     brir_bands_r = np.real(brir_bands_r)
 
     # Bandpass filter and sum each band — same as sum_frequency_bands
-    from scipy.signal import butter, sosfilt
-    brir_l_total = np.zeros(brir_len)
-    brir_r_total = np.zeros(brir_len)
+    from ..core.utils import sum_frequency_bands
+    brir_l, _ = sum_frequency_bands(brir_bands_l, fs = 44100)
+    brir_r, _ = sum_frequency_bands(brir_bands_r, fs = 44100)
 
-    for b, fc in enumerate(freq_bands):
-        # Bandpass filter for this band
-        f_low  = fc / np.sqrt(2)
-        f_high = fc * np.sqrt(2)
-        f_low  = max(f_low,  20.0)
-        f_high = min(f_high, fs / 2 - 1)
-
-        sos = butter(4, [f_low, f_high], btype='band', fs=fs, output='sos')
-        brir_l_total += sosfilt(sos, brir_bands_l[:, b])
-        brir_r_total += sosfilt(sos, brir_bands_r[:, b])
-
-    return brir_l_total[:n_samples], brir_r_total[:n_samples], np.real(brir_bands_l[:n_samples]), np.real(brir_bands_r[:n_samples])
+    return brir_l[:n_samples], brir_r[:n_samples], brir_bands_l, brir_bands_r
 
 def plot_brir(brir_l, brir_r, brir_bands_l, brir_bands_r, fs=44100, 
               freq_bands=None, duration=2.0):
@@ -103,6 +98,9 @@ def plot_brir(brir_l, brir_r, brir_bands_l, brir_bands_r, fs=44100,
 
     n_plot = int(duration * fs)
     t = np.arange(n_plot) / fs * 1000  # ms
+    print(f"brir_l length: {len(brir_l)}")
+    print(f"n_plot: {n_plot}")
+    print(f"t range: {t[0]:.2f}ms to {t[-1]:.2f}ms")
 
     # ---- Plot 1: Broadband BRIR L and R ----
     fig, axes = plt.subplots(2, 1, figsize=(12, 6), sharex=True)
