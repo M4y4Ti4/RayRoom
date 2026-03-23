@@ -12,7 +12,7 @@ from rayroom.core.auralisation import load_hrtf, render_brir, plot_brir, get_hri
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
 
-def run_geometric(rec_pos, source_pos, room_dim, n_rays, max_hops, rir_duration, ism_order, hrtf):
+def run_geometric(rec_pos, source_pos, room_dim, n_rays, max_hops, rir_duration, ism_order):
 
     # 1. Create Room (Shoebox 5m x 4m x 3m)
     # Different materials for walls
@@ -78,8 +78,6 @@ def run_geometric(rec_pos, source_pos, room_dim, n_rays, max_hops, rir_duration,
     fs=fs,
     duration=rir_duration,
     interference=True)
-
-    plot_brir(brir_l, brir_r, brir_bands_l, brir_bands_r, fs = 44100)
 
     return {
         "rir_total": rir_total, 
