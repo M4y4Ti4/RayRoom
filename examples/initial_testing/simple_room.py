@@ -7,7 +7,7 @@ from rayroom import Room, Source, Receiver, Person, RayTracer, get_material, Hyb
 from rayroom.core.data_anal import plot_rir, plot_transfer_function, overlay_DG, plot_rir_per_band, plot_rir_components
 from rayroom.room.visualize import plot_reverberation_time
 import random
-from rayroom.core.auralisation import load_hrtf, render_brir, plot_brir
+from rayroom.core.auralisation import load_hrtf, render_brir, plot_brir, get_hrir
 
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -31,7 +31,7 @@ def main():
     room.add_source(source)
 
     # Receiver (Microphone) at (4, 3, 1.5)
-    receiver1 = Receiver("persona", [4.26, 2.59, 1.62], radius=0.09)
+    receiver1 = Receiver("persona", [4.26, 1.76, 1.62], radius=0.09)
     room.add_receiver(receiver1)
 
     # Plot Room BEFORE Simulation (Check geometry)
@@ -50,7 +50,7 @@ def main():
 
     print("Starting simulation...")
     #tracer.generate_rir_only(source, n_rays=20000, max_hops=30)
-    rirs, all_paths  = tracer.render(n_rays=200000,
+    rirs, all_paths  = tracer.render(n_rays=2000,
             max_hops=150,
             rir_duration=2.0,
             record_paths=True,
@@ -64,8 +64,9 @@ def main():
     hist = tracer.last_histogram[receiver1.name]
 
     rir_ism, rir_ray, rir_hybrid = plot_rir_components(hist, fs = fs)
-    hrtf_path = hrtf = r"C:\Masters\HRTF\KEMAR_GRAS_EarSim_LargeEars_FreeFieldComp_44kHz.sofa"
-    hrtf = load_hrtf(hrtf_path, fs_target=44100)
+    hrtf = load_hrtf(r"C:\Masters\HRTF\KEMAR_GRAS_EarSim_LargeEars_FreeFieldCompMinPhase_44kHz.sofa", fs_target=44100)
+    hrir = get_hrir(hrtf, az_target=145.77, el_target=0.0)
+
     brir_l, brir_r, brir_bands_l, brir_bands_r = render_brir(
     histogram=hist,
     src_xyz=[3.04, 2.59, 1.62],
