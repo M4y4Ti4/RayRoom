@@ -65,7 +65,6 @@ def main():
 
     rir_ism, rir_ray, rir_hybrid = plot_rir_components(hist, fs = fs)
     hrtf = load_hrtf(r"C:\Masters\HRTF\KEMAR_GRAS_EarSim_LargeEars_FreeFieldCompMinPhase_44kHz.sofa", fs_target=44100)
-    hrir = get_hrir(hrtf, az_target=145.77, el_target=0.0)
 
     brir_l, brir_r, brir_bands_l, brir_bands_r = render_brir(
     histogram=hist,
