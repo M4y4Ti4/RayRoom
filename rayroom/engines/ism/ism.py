@@ -391,7 +391,7 @@ class ImageSourceEngine:
 
         # Geometric Spreading: Power * Area / (4 * pi * r^2)
         receiver_area = np.pi * receiver.radius**2
-        geom_factor = receiver_area / (4 * np.pi * total_dist**2 + 1e-12)
+        geom_factor = 1 / (4 * np.pi * total_dist**2 + 1e-12)
 
         # Directivity
         # Direction from source (last point) to first hit (second to last)

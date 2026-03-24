@@ -95,7 +95,13 @@ class RayTracer:
         directions = np.stack((x, y, z), axis=1)
 
         # Base energy per ray (uniform distribution)
-        base_energy = np.full(N_BANDS, source.power / n_rays)
+        receiver = self.room.receivers[0]
+        gamma = np.arcsin(receiver.radius/1.0)
+
+        denom = 2 * np.pi * n_rays * (1.0 - np.cos(gamma))
+        equalised_ray_energy = source.power / (denom + 1e-12)
+        base_energy = np.full(N_BANDS, equalised_ray_energy)
+
         # Assuming scalar power for now. If array, handle accordingly.
 
         # Directivity Factors
@@ -104,7 +110,6 @@ class RayTracer:
             # Dot product: cos(theta) = (a . b) / (|a||b|)
             # Directions and orientation are normalized
             cos_theta = np.dot(directions, source.orientation)
-
             if source.directivity == "cardioid":
                 # 0.5 * (1 + cos(theta))
                 gain = 0.5 * (1.0 + cos_theta)
