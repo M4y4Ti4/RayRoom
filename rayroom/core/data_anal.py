@@ -23,7 +23,7 @@ def plot_transfer_function(rir_total, fs, ax = None, label = "GA"):
     ax.set_ylabel("Magnitude (dB)")
     ax.set_title("Transfer Function")
     ax.set_xlim([0, 4000])
-    ax.set_ylim([-80, 20])
+    ax.set_ylim([-100, 0])
     ax.grid(True, which='both', alpha=0.3)
     #ax.set_xticks([63, 125, 250, 500, 1000, 2000, 4000])
     #ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, _: str(int(x))))
@@ -35,10 +35,10 @@ def plot_transfer_function(rir_total, fs, ax = None, label = "GA"):
 
 
 
-def overlay_DG(rir_total, fs):
-    path = r"C:\Masters\DGBABY\edg-acoustics\examples\shoebox\output\TR_corrected_lc1_200Hz_2s_highabslc__10.npz"
+def overlay_DG(rir_total,wave_data_path, fs):
+    path = wave_data_path
     data_DG = np.load(path, allow_pickle=True)
-    TR_corrected = data_DG["TR"]
+    TR_corrected = data_DG["TR_cor_resampled"]
     freqs_DG     = data_DG["freqs"]  # already all positive
 
     mag_DG = 20 * np.log10(np.abs(TR_corrected) + 1e-12)
@@ -77,7 +77,7 @@ def plot_rir(rir_total, fs):
     ax.set_ylabel("Amplitude")
     ax.set_title("Impulse Response")
     ax.grid(True, which='both', alpha=0.3)
-    plt.savefig(r"C:\Masters\RayroomProject\rayroom\examples\initial_testing\RIR.png")
+    #plt.savefig(r"C:\Masters\RayroomProject\rayroom\examples\initial_testing\RIR.png")
     plt.show()
 
 def plot_rir_per_band(rir_array, rir_bands, fs, freq_bands=None):
