@@ -50,7 +50,7 @@ def main():
 
     print("Starting simulation...")
     #tracer.generate_rir_only(source, n_rays=20000, max_hops=30)
-    rirs, all_paths  = tracer.render(n_rays=2000,
+    rirs, all_paths  = tracer.render(n_rays=200000,
             max_hops=150,
             rir_duration=2.0,
             record_paths=True,
@@ -61,7 +61,17 @@ def main():
     rir_array = rirs[receiver1.name]
     rir_total, rir_bands = sum_frequency_bands(rir_array, fs = 44100) #band-pass and sum each frequency band to produce broadband RIR
 
+    #extracting and sorting histogram by time
     hist = tracer.last_histogram[receiver1.name]
+    hist_sorted = sorted(hist, key=lambda x: x[0])
+
+    direct = hist_sorted[0]
+    time_direct, amp_direct, is_ism_direct, az_direct, el_direct = direct
+    amp_direct = np.mean(np.real(np.array(amp_direct))) #taking the mean of the band amplitudes for broadband scaling 
+
+    first_reflection = hist_sorted[1]
+    time_first, amp_first, is_ism_first, az_first, el_direct = first_reflection
+    amp_first = np.mean(np.real(np.array(amp_first)))
 
     rir_ism, rir_ray, rir_hybrid = plot_rir_components(hist, fs = fs)
     hrtf = load_hrtf(r"C:\Masters\HRTF\KEMAR_GRAS_EarSim_LargeEars_FreeFieldCompMinPhase_44kHz.sofa", fs_target=44100)
@@ -77,12 +87,16 @@ def main():
 
     plot_brir(brir_l, brir_r, brir_bands_l, brir_bands_r, fs = 44100)
 
-    np.savez(r"C:\Masters\RayroomProject\rayroom\examples\initial_testing\rir_data.npz", 
+    np.savez(r"C:\Masters\RayroomProject\rayroom\examples\initial_testing\rir_shoebox_cal.npz", 
              rir_total = rir_total, 
              rir_array = rir_array,
              fs = fs,
              brir_l = brir_l,
-             brir_r = brir_r)
+             brir_r = brir_r, 
+             t_d = time_direct,
+             t_r = time_first,
+             amp_direct = amp_direct,
+             amp_first = amp_first)
     print("saved")
 
 
