@@ -23,7 +23,6 @@ def plot_transfer_function(rir_total, fs, ax = None, label = "GA"):
     ax.set_ylabel("Magnitude (dB)")
     ax.set_title("Transfer Function")
     ax.set_xlim([0, 4000])
-    ax.set_ylim([-100, 0])
     ax.grid(True, which='both', alpha=0.3)
     #ax.set_xticks([63, 125, 250, 500, 1000, 2000, 4000])
     #ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, _: str(int(x))))
@@ -35,35 +34,39 @@ def plot_transfer_function(rir_total, fs, ax = None, label = "GA"):
 
 
 
-def overlay_DG(rir_total,wave_data_path, fs):
-    path = wave_data_path
-    data_DG = np.load(path, allow_pickle=True)
-    TR_corrected = data_DG["TR_cor_resampled"]
-    freqs_DG     = data_DG["freqs"]  # already all positive
+def overlay_DG(rir_total,wave_data_path = None, wave_rir = None, fs = 44100):
 
-    mag_DG = 20 * np.log10(np.abs(TR_corrected) + 1e-12)
+    if wave_data_path is not None: 
+        path = wave_data_path
+        data_DG = np.load(path, allow_pickle=True)
+        TR_corrected = data_DG["TR_cor_resampled"]
+        freqs_DG     = data_DG["freqs"]  # already all positive
 
+        mag_DG = 20 * np.log10(np.abs(TR_corrected) + 1e-12)
+
+    elif wave_rir is not None:
+        n = len(wave_rir)
+        F = np.fft.rfft(wave_rir, n=n)
+        freqs_DG = np.fft.rfftfreq(n, d=1/fs)
+        mag_DG = 20 * np.log10(np.abs(F) + 1e-12)
+
+    else: 
+        raise ValueError("probide wave data")
+    
     # Compute GA TF
     n        = len(rir_total)
     H        = np.fft.rfft(rir_total, n=n)
     freqs_GA = np.fft.rfftfreq(n, d=1/fs)
     mag_GA   = 20 * np.log10(np.abs(H) + 1e-12)
 
-    # Align levels in 160-161 Hz band
-    align_low, align_high = 160, 161
-    mask_DG = (freqs_DG >= align_low) & (freqs_DG <= align_high)
-    mask_GA = (freqs_GA >= align_low) & (freqs_GA <= align_high)
-    offset  = np.mean(mag_DG[mask_DG]) - np.mean(mag_GA[mask_GA])
-    mag_GA_aligned = mag_GA + offset
-
     fig, ax = plt.subplots(figsize=(12, 5))
     ax.plot(freqs_DG, mag_DG,         label="DG",                          color='blue')
-    ax.plot(freqs_GA, mag_GA_aligned, label=f"GA (aligned +{offset:.1f} dB)", color='orange')
+    ax.plot(freqs_GA, mag_GA, label = "GA", color='orange')
     ax.set_xlabel("Frequency (Hz)")
     ax.set_ylabel("Magnitude (dB)")
     ax.set_title("Transfer Function: DG vs ISM")
-    ax.set_xlim(0, 200)
-    ax.set_ylim(-60, 10)
+    ax.set_xlim(0, 800)
+    ax.set_ylim(-100, 10)
     ax.grid(True, alpha=0.3)
     ax.legend()
     plt.tight_layout()
