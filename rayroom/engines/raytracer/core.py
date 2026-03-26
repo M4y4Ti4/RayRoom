@@ -37,9 +37,12 @@ class RayTracer:
         # Precompute air absorption for a reference frequency (e.g. 1kHz)
         # Real simulation should handle bands.
         # For simple energy ray tracing, we approximate broadband decay.
+    
         self.air_absorption_db_m = np.array([air_absorption_coefficient(
                     f, temperature, humidity
                 ) for f in FREQ_BANDS])
+        
+
     def run(self, source, n_rays=10000, max_hops=50, energy_threshold=1e-6, record_paths=False, min_ism_order=-1):
         
         print(f"[RayTracer.run] min_ism_order={min_ism_order}")  # add this
@@ -96,9 +99,13 @@ class RayTracer:
 
         # Base energy per ray (uniform distribution)
         receiver = self.room.receivers[0]
-        gamma = np.arcsin(receiver.radius/1.0)
+        src = np.array(source.position)
+        rec = np.array(receiver.position)
+        r = np.linalg.norm(src - rec)
 
-        denom = 2 * np.pi * n_rays * (1.0 - np.cos(gamma))
+        gamma = np.arcsin(receiver.radius/r)
+
+        denom = 2 * np.pi * r**2 * n_rays * (1.0 - np.cos(gamma))
         equalised_ray_energy = source.power / (denom + 1e-12)
         base_energy = np.full(N_BANDS, equalised_ray_energy)
 
