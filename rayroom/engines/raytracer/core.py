@@ -37,11 +37,13 @@ class RayTracer:
         # Precompute air absorption for a reference frequency (e.g. 1kHz)
         # Real simulation should handle bands.
         # For simple energy ray tracing, we approximate broadband decay.
-    
+
+   
         self.air_absorption_db_m = np.array([air_absorption_coefficient(
                     f, temperature, humidity
                 ) for f in FREQ_BANDS])
-        
+   
+        #self.air_absorption_db_m = air_absorption_coefficient(1000.0, temperature, humidity)
 
     def run(self, source, n_rays=10000, max_hops=50, energy_threshold=1e-6, record_paths=False, min_ism_order=-1):
         
@@ -138,7 +140,7 @@ class RayTracer:
             initial_energies = base_energy[np.newaxis, :] * gain[:, np.newaxis] * scaling_factor
         else:
             initial_energies = np.tile(base_energy, (n_rays, 1))
-
+            #initial_energies = np.full(n_rays, base_energy)
         collected_paths = []
         receiver_hits = [] # List to store hits returned by single ray trace
         
@@ -177,19 +179,13 @@ class RayTracer:
         """
         Trace a single ray.
         """
-        if not hasattr(self, '_ray_debug'):
-            self._ray_debug = 0
 
-        if self._ray_debug < 3:
-            print(f"\n[RAY DEBUG] Initial energy per band: {current_energy}")
         ray_path = []
         current_time = 0.0
         total_dist = 0.0
         is_pure_specular = True
 
         if np.mean(current_energy) < energy_threshold or not np.all(np.isfinite(current_energy)):
-            if not np.isfinite(current_energy):
-                print(f"DEBUG: Invalid energy detected: {current_energy}. Stopping ray.")
             return None, []
 
         hit_results = []
@@ -270,7 +266,8 @@ class RayTracer:
                         should_record = True
                         #if is_pure_specular and hop <= min_ism_order: #use if you want non-specular early reflections
                         if hop <= min_ism_order:
-                            should_record = False
+                            if is_pure_specular:
+                                should_record = False
                             #print(f"[skip] hop={hop} min_ism_order={min_ism_order} is_pure_specular={is_pure_specular}")
                         #else: 
                             #print(f"[record] hop={hop} min_ism_order={min_ism_order} is_pure_specular={is_pure_specular}")
@@ -287,6 +284,7 @@ class RayTracer:
                             
                             # Storing hit info: (receiver_name, time, energy, direction)
                             energy_array = current_energy.copy()
+                            #energy_array = np.full(N_BANDS, current_energy)
                             az = float(np.random.uniform(0, 360))
                             el = float(np.random.choice([-30, -15, 0, 15, 30]))
 
@@ -368,11 +366,5 @@ class RayTracer:
                     ray_dir = reflect_vector(ray_dir, hit_normal)
 
                 ray_origin = hit_point + hit_normal * 1e-3
-            if self._ray_debug < 3 and hop < 3:
-                print(f"  hop={hop} wall={hit_obj.material.name} "
-                    f"abs_coeff={abs_coeff_bands} "
-                    f"energy_after={current_energy}")
-                    
-        if self._ray_debug < 3:
-            self._ray_debug += 1
+
         return (ray_path if record_paths and ray_path else None), hit_results

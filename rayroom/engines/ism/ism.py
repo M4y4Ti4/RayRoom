@@ -95,10 +95,11 @@ class ImageSourceEngine:
         self.temperature = temperature
         self.humidity = humidity
         # Match RayTracer's reference frequency
+    
         self.air_absorption_db_m = np.array([air_absorption_coefficient(
             f, temperature, humidity
         ) for f in FREQ_BANDS])
-
+    
     def run(self, source, max_order=2, verbose=True):
         """Computes early reflections for a given source.
 
@@ -432,7 +433,7 @@ class ImageSourceEngine:
         complex_amplitude = amplitude * np.exp(-1j * total_phase)
         #print(f"[ISM] complex_amplitude dtype: {complex_amplitude.dtype}")
         #print(f"[ISM] complex_amplitude: {complex_amplitude}")
-        print(f"[ISM record] time={time:.4f} order={image.order} receiver={receiver.name}")
+        #print(f"[ISM record] time={time:.4f} amp={np.abs(complex_amplitude[0])}")
         # Record
         if isinstance(receiver, AmbisonicReceiver):
             # Direction from last bounce (or source) to receiver
