@@ -25,13 +25,17 @@ def main():
     }
 
     room = Room.create_shoebox([5, 4, 3], materials=mats)
-    # 2. Add Objects
+    # 2. Add Objectss
     # Source at (1, 1, 1.5)
-    source    = Source("Speaker", [3.04, 2.59, 1.62], power=1.0)
+    #source    = Source("Speaker", [1.04, 2.59, 1.62], power=1.0)
+    #source    = Source("Speaker", [1, 1, 1.5], power=1.0)
+    source = Source("Speaker", [1.2, 1.5, 1.3])
     room.add_source(source)
 
     # Receiver (Microphone) at (4, 3, 1.5)
-    receiver1 = Receiver("persona", [4.26, 1.76, 1.62], radius=0.09)
+    #receiver1 = Receiver("persona", [3.26, 1.76, 1.62], radius=0.1)
+    #receiver1 = Receiver("persona", [4, 3, 1.5], radius=0.09)
+    receiver1 = Receiver("persona", [3.1, 2.0, 1.2])
     room.add_receiver(receiver1)
 
     # Plot Room BEFORE Simulation (Check geometry)
@@ -50,7 +54,7 @@ def main():
 
     print("Starting simulation...")
     #tracer.generate_rir_only(source, n_rays=20000, max_hops=30)
-    rirs, all_paths  = tracer.render(n_rays=20000,
+    rirs, all_paths  = tracer.render(n_rays=200000,
             max_hops=150,
             rir_duration=2.0,
             record_paths=True,
@@ -64,17 +68,18 @@ def main():
     #extracting and sorting histogram by time
     hist = tracer.last_histogram[receiver1.name]
     hist_sorted = sorted(hist, key=lambda x: x[0])
-
+    plot_rir(rir_total, fs = 44100)
     rir_raw = rir_array.sum(axis=1)
     direct = hist_sorted[0]
     time_direct, amp_direct, is_ism_direct, az_direct, el_direct = direct
-    print(amp_direct)
+    print(f"amp direct: {amp_direct}")
     amp_direct_scalar = np.mean(np.abs(np.array(amp_direct))) #taking the mean of the band amplitudes for broadband scaling 
 
     first_reflection = hist_sorted[1]
     time_first, amp_first, is_ism_first, az_first, el_direct = first_reflection
     amp_first = np.mean(np.abs(np.array(amp_first)))
-
+    for amp in amp_direct: 
+        print(np.abs(amp))
     print(amp_direct_scalar)
 
     rir_ism, rir_ray, rir_hybrid = plot_rir_components(hist, fs = fs)
@@ -82,8 +87,8 @@ def main():
 
     brir_l, brir_r, brir_bands_l, brir_bands_r = render_brir(
     histogram=hist,
-    src_xyz=[3.04, 2.59, 1.62],
-    rec_xyz=[4.26, 1.76, 1.62],
+    src_xyz=[1.04, 2.59, 1.62],
+    rec_xyz=[3.26, 1.76, 1.62],
     hrtf=hrtf,
     fs=fs,
     duration=2.0,
@@ -100,15 +105,20 @@ def main():
 
     # Find the highest amplitude ISM reflection
     hist_ism = [(t,a,f,az,el) for t,a,f,az,el in hist if f]
-    hist_ism_sorted = sorted(hist_ism, key=lambda x: np.mean(np.abs(np.array(x[1]))), reverse=True)
-
+    hist_ism_sorted_amp = sorted(hist_ism, key=lambda x: np.mean(np.abs(np.array(x[1]))), reverse=True)
+    hist_ism_sorted_time = sorted(hist_ism, key=lambda x: x[0])
     print("Top 5 highest amplitude ISM reflections:")
-    for t,a,f,az,el in hist_ism_sorted[:5]:
+    for t,a,f,az,el in hist_ism_sorted_amp[:5]:
         amp = np.mean(np.abs(np.array(a)))
         print(f"  t={t*1000:.2f}ms  amp={amp:.6f}  az={az:.1f}°  el={el:.1f}°")
 
+    print("First 10 ISM arrivals:")
+    for t,a,f,az,el in hist_ism_sorted_time[:10]:
+        print(f"t = {t * 1000:.2f}ms az={az:.1f} el={el:.1f}")
 
-    np.savez(r"C:\Masters\Hybrid\RayroomProject\examples\initial_testing\rir_shoebox_cal_newscale.npz", 
+   
+
+    np.savez(r"C:\Masters\Hybrid\hybridsim\results\pos3\rir_shoebox_pos3_200000_withphase_ismspec.npz", 
              rir_total = rir_total, 
              rir_bands = rir_bands,
              fs = fs,
@@ -120,6 +130,9 @@ def main():
              amp_first = amp_first)
     print("saved")
 
+    # After simulation, find direct sound in histogram
+    hist = tracer.last_histogram[receiver1.name]
+    hist_sorted = sorted(hist, key=lambda x: x[0])
 
 if __name__ == "__main__":
     main()

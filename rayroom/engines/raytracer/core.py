@@ -264,10 +264,9 @@ class RayTracer:
                         # and the reflection order (hop) is covered by ISM (<= min_ism_order),
                         # then SKIP recording.
                         should_record = True
-                        #if is_pure_specular and hop <= min_ism_order: #use if you want non-specular early reflections
-                        if hop <= min_ism_order:
-                            if is_pure_specular:
-                                should_record = False
+                        if is_pure_specular and hop <= min_ism_order: #use if you want non-specular early reflections
+                        #if hop <= min_ism_order:
+                            should_record = False
                             #print(f"[skip] hop={hop} min_ism_order={min_ism_order} is_pure_specular={is_pure_specular}")
                         #else: 
                             #print(f"[record] hop={hop} min_ism_order={min_ism_order} is_pure_specular={is_pure_specular}")

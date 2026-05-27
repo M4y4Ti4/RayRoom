@@ -60,29 +60,14 @@ def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True, collapse_
 
     # Sort by time
     histogram.sort(key=lambda x: x[0])
+    entries = [(t, a, f, az, el) for t, a, f, az, el in histogram if t < duration]
+    
 
-    if len(histogram[0]) == 5:
-        times = np.array([t for t, _, _, _, _ in histogram])
-        raw_amps = np.array([a for _, a, _, _, _ in histogram])
-        is_ism = np.array([f for _, _, f, _, _ in histogram])
-        azimuths = np.array([az for _, _, _, az, _ in histogram])
-        elevations = np.array([el for _, _, _, _, el in histogram])
-    elif len(histogram[0]) == 3: 
-        times = np.array([t for t, _, _ in histogram])
-        raw_amps = [a for _, a, _ in histogram]
-        is_ism = np.array([flag for _, _, flag in histogram])
-    else: 
-        times = np.array([t for t, _ in histogram])
-        raw_amps = np.array([a for t, a in histogram])
-        is_ism = np.zeros(len(raw_amps), dtype = bool)
-
-    # Discard late reflections
-    valid = times < duration
-    times = times[valid]
-    raw_amps = [raw_amps[i] for i in range(len(raw_amps)) if valid[i]]
-    is_ism = is_ism[valid]
-    #azimuths = azimuths[valid]
-    #elevations = elevations[valid]
+    times      = np.array([e[0] for e in entries])
+    raw_amps   = [e[1] for e in entries]
+    is_ism     = np.array([e[2] for e in entries], dtype=bool)
+    azimuths   = np.array([e[3] for e in entries])
+    elevations = np.array([e[4] for e in entries])
 
     if len(times) == 0:
         return np.zeros((rir_len, len(raw_amps[0]) if raw_amps else 0))
@@ -90,7 +75,8 @@ def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True, collapse_
     n_bands = len(raw_amps[0])
     final_amps = np.zeros((len(raw_amps), n_bands))
     
-
+    if not entries:
+        return np.zeros((rir_len, n_bands))
     # Use complex dtype when interference is enabled
     if interference:
         final_amps = np.zeros((len(raw_amps), n_bands), dtype=complex)
@@ -109,6 +95,18 @@ def generate_rir(histogram, fs=44100, duration=2.0, random_phase=True, collapse_
             if random_phase:
                 a *= np.random.choice([-1, 1])
             final_amps[i] = a
+    """
+    for i, (amp, ism) in enumerate(zip(raw_amps, is_ism)):
+        if ism:
+            # ISM: always real positive delta, no phase
+            final_amps[i] = np.abs(np.real(amp)) if not interference else amp
+        else:
+            # Ray tracing: random phase for diffuse field simulation
+            a = np.sqrt(np.abs(np.real(amp)))
+            if random_phase:
+                a *= np.random.choice([-1, 1])
+            final_amps[i] = a
+    """
 
     indices = (times * fs).astype(int)
     for b in range(n_bands):

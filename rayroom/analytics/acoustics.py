@@ -565,3 +565,22 @@ def calculate_roughness(signal, fs):
     """
     roughness, R_specific, bark_axis, _ = mq.sq_metrics.roughness.roughness_dw(signal, fs)
     return roughness, R_specific
+
+def schroeder_decay(rir, fs=44100):
+
+    # Energy signal
+    energy = rir**2
+
+    # Backward cumulative sum
+    sch = np.cumsum(energy[::-1])[::-1]
+
+    # Normalize
+    sch /= np.max(sch)
+
+    # Convert to dB
+    sch_db = 10 * np.log10(sch + 1e-12)
+
+    # Time axis
+    t = np.arange(len(rir)) / fs
+
+    return t, sch_db

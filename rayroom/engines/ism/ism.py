@@ -391,7 +391,6 @@ class ImageSourceEngine:
         time = total_dist / C_SOUND
 
         # Geometric Spreading: Power * Area / (4 * pi * r^2)
-        receiver_area = np.pi * receiver.radius**2
         geom_factor = 1 / (4 * np.pi * total_dist**2 + 1e-12)
 
         # Directivity
@@ -420,7 +419,7 @@ class ImageSourceEngine:
         energy *= 10**(-self.air_absorption_db_m * total_dist / 10.0)
 
         # Wall Absorption (Reflection coefficients)
-        total_phase = np.zeros(len(FREQ_BANDS))
+        #total_phase = np.zeros(len(FREQ_BANDS))
         for wall in walls_hit:
             mat = wall.material #array, 7
             abs_coeff = mat.absorption
@@ -428,9 +427,13 @@ class ImageSourceEngine:
             #total_phase += np.where(abs_coeff > 0.5, np.pi, 0.0)
         
         amplitude = np.sqrt(energy)
+        """
         k = 2 * np.pi * np.array(FREQ_BANDS) / C_SOUND
         total_phase += k * total_dist
         complex_amplitude = amplitude * np.exp(-1j * total_phase)
+        """
+        #complex_amplitude = amplitude + 0j
+        complex_amplitude = amplitude 
         #print(f"[ISM] complex_amplitude dtype: {complex_amplitude.dtype}")
         #print(f"[ISM] complex_amplitude: {complex_amplitude}")
         #print(f"[ISM record] time={time:.4f} amp={np.abs(complex_amplitude[0])}")
