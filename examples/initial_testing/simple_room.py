@@ -3,7 +3,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from rayroom.core.utils import sum_frequency_bands
-from rayroom import Room, Source, Receiver, Person, RayTracer, get_material, HybridRenderer
+from rayroom import Room, Source, Receiver, Window, Person, RayTracer, get_material, HybridRenderer
 from rayroom.core.data_anal import plot_rir, plot_transfer_function, overlay_DG, plot_rir_per_band, plot_rir_components
 from rayroom.room.visualize import plot_reverberation_time
 import random
@@ -25,17 +25,17 @@ def main():
     }
 
     room = Room.create_shoebox([5, 4, 3], materials=mats)
-    # 2. Add Objectss
+    # 2. Add Objects
     # Source at (1, 1, 1.5)
-    #source    = Source("Speaker", [1.04, 2.59, 1.62], power=1.0)
+    source    = Source("Speaker", [1.36, 3.76, 1.62], power=1.0)
     #source    = Source("Speaker", [1, 1, 1.5], power=1.0)
-    source = Source("Speaker", [1.2, 1.5, 1.3])
+    #source = Source("Speaker", [1.2, 1.5, 1.3])
     room.add_source(source)
 
     # Receiver (Microphone) at (4, 3, 1.5)
-    #receiver1 = Receiver("persona", [3.26, 1.76, 1.62], radius=0.1)
+    receiver1 = Receiver("persona", [3.26, 1.76, 1.62], radius=0.1)
     #receiver1 = Receiver("persona", [4, 3, 1.5], radius=0.09)
-    receiver1 = Receiver("persona", [3.1, 2.0, 1.2])
+    #receiver1 = Receiver("persona", [3.1, 2.0, 1.2])
     room.add_receiver(receiver1)
 
     # Plot Room BEFORE Simulation (Check geometry)
@@ -118,7 +118,7 @@ def main():
 
    
 
-    np.savez(r"C:\Masters\Hybrid\hybridsim\results\pos3\rir_shoebox_pos3_200000_withphase_ismspec.npz", 
+    np.savez(r"C:\Masters\Hybrid\hybridsim\results\pos1\rir_shoebox_pos1_200000_vectorized.npz", 
              rir_total = rir_total, 
              rir_bands = rir_bands,
              fs = fs,
