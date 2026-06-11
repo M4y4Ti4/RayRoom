@@ -15,6 +15,16 @@ def get_hrir(hrtf, az_target=0, el_target=0):
     idx = np.argmin(distances)
     return hrtf.Data_IR[idx]  # shape (2, samples)
 
+def get_onset(hrir, threshold=0.01):
+    """
+    finds the onset sample of an HRIR
+    """
+    max_val = np.max(np.abs(hrir))
+    if max_val == 0:
+        return 0
+    
+    onset = np.where(np.abs(hrir)> threshold * max_val)[0]
+    return onset[0] if len(onset) > 0 else 0
 
 def load_hrtf(hrtf_path, fs_target):
     hrtf = sofar.read_sofa(hrtf_path)
@@ -55,12 +65,13 @@ def render_brir(histogram, src_xyz, rec_xyz, hrtf, fs=44100, duration=2.0,
         hrir   = get_hrir(hrtf, az_target=float(az), el_target=float(el))
         hrir_l = hrir[0].astype(complex)  # shape (hrir_len,)
         hrir_r = hrir[1].astype(complex)
+
         delay_left = np.where(np.abs(hrir_l) > 0.01*np.max(np.abs(hrir_l)))[0][0]
         delay_right = np.where(np.abs(hrir_r) > 0.01*np.max(np.abs(hrir_r)))[0][0]
         onset_delay = min(delay_left, delay_right)
         hrir_l = hrir_l[onset_delay:]
         hrir_r = hrir_r[onset_delay:]
-        hrir_len = len(hrir_l)
+        hrir_len_entry = len(hrir_l)
         # Per-band amplitude
         amp_array = np.array(amp)  # shape (n_bands,)
 
@@ -74,11 +85,12 @@ def render_brir(histogram, src_xyz, rec_xyz, hrtf, fs=44100, duration=2.0,
             scalars = np.sqrt(np.abs(np.real(amp_array))) * np.random.choice([-1, 1])
 
         # Place each band at correct sample index
-        idx = int(time * fs)
-        if idx + hrir_len <= brir_len:
+        idx = int(time * fs) - onset_delay
+        idx = max(0, idx)
+        if idx + hrir_len_entry <= brir_len:
             for b in range(n_bands):
-                brir_bands_l[idx:idx + hrir_len, b] += scalars[b] * hrir_l
-                brir_bands_r[idx:idx + hrir_len, b] += scalars[b] * hrir_r
+                brir_bands_l[idx:idx + hrir_len_entry, b] += scalars[b] * hrir_l
+                brir_bands_r[idx:idx + hrir_len_entry, b] += scalars[b] * hrir_r
 
     # Take real part of each band
     brir_bands_l = np.real(brir_bands_l)  # (brir_len, n_bands)
